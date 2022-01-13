@@ -44,14 +44,7 @@ int main(int argc, char ** argv) {
   fread(program, 1, prog_size, fp);
   fclose(fp);
 
-  const char* module = R"(HloModule add_vec_module
-    ENTRY %add_vec (a: s32[256], b: s32[256]) -> s32[256] {
-      %a = s32[256] parameter(0)
-      %b = s32[256] parameter(1)
-      ROOT %sum = s32[256] add(%a, %b)
-    }
-    )";
-  TpuCompiledProgramHandle* cph = driver_fn.TpuDriver_CompileProgramFromText(driver, module, 1, 0, NULL);
+  TpuCompiledProgramHandle* cph = driver_fn.TpuDriver_CompileProgramFromText(driver, program, 1, 0, NULL);
   TpuLoadedProgramHandle* lph;
 
   if (NULL == cph) {
