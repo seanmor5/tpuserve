@@ -1,3 +1,3 @@
 
-all: tpuserve.cc libtpu.h
-	g++ tpuserve tpuserve.cc -ldl
+all: tpuserve.cc libtpu.h logging.h
+	g++ -o tpuserve logging.h tpuserve.cc -ldl

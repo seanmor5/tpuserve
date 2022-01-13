@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "logging.h"
 #include "libtpu.h"
 
 void* LoadAndInitializeDriver(const char* shared_lib,
@@ -21,28 +22,44 @@ void* LoadAndInitializeDriver(const char* shared_lib,
 
 int main(int argc, char ** argv) {
   // Load and Initialize TPU Driver
+  LOG_INFO("Loading and initializing TPU Driver");
   struct TpuDriverFn driver_fn;
   void * handle = LoadAndInitializeDriver("libtpu.so", &driver_fn);
+
+  LOG_INFO("Opening TPU Driver");
   struct TpuDriver* driver = driver_fn.TpuDriver_Open("local://");
 
-  LOG_INFO("TPU Driver Version: %s", driver_fn.TpuDriver_Version());
+  LOG_INFO("Querying System Information");
+  struct TpuSystemInfo* info = driver_fn.TpuDriver_QuerySystemInfo(driver);
+  driver_fn.TpuDriver_FreeSystemInfo(info);
 
-  // Open *.hlo in model directory
-  const char * model = "models/model.hlo";
+  // An example of simple program to sum two parameters.
+  LOG_INFO("Compiling models in model directory");
+  const char* model = "models/model.txt";
   FILE * fp = fopen(model, "r");
   fseek(fp, 0, SEEK_END);
   long int prog_size = ftell(fp);
   fseek(fp, 0, SEEK_SET);
-  program = malloc(prog_size + 1);
-  fread(buffer, 1, prog_size, f);
-  program[prog_size] = '\0';
+  char * program = (char *) malloc(prog_size + 1);
+  fread(program, 1, prog_size, fp);
+  fclose(fp);
 
-  // Compile HLO
-  struct TpuCompiledProgramHandle* cph =
-    driver_fn.TpuDriver_CompileProgramFromText(driver, program, 1, 0, NULL);
+  const char* module = R"(HloModule add_vec_module
+    ENTRY %add_vec (a: s32[256], b: s32[256]) -> s32[256] {
+      %a = s32[256] parameter(0)
+      %b = s32[256] parameter(1)
+      ROOT %sum = s32[256] add(%a, %b)
+    }
+    )";
+  TpuCompiledProgramHandle* cph = driver_fn.TpuDriver_CompileProgramFromText(driver, module, 1, 0, NULL);
+  TpuLoadedProgramHandle* lph;
 
-  TpuEvent* compile_events[] = {cph->event};
-
+  if (NULL == cph) {
+    LOG_FATAL("Unable to compile model");
+  } else {
+    TpuEvent* compile_events[] = { cph->event };
+    lph = driver_fn.TpuDriver_LoadProgram(driver, 0, cph, 1, compile_events);
+  }
   // Close driver handle
   dlclose(handle);
 }
