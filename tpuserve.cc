@@ -1,8 +1,10 @@
 #include <dlfcn.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <filesystem>
 
 #include "logging.h"
+#include "model.h"
 #include "macro.h"
 #include "libtpu.h"
 
@@ -21,6 +23,14 @@ void* LoadAndInitializeDriver(const char* shared_lib,
   return handle;
 }
 
+std::vector<std::unique_ptr<TPUServeModel>> CompileModelsInModelRepo(void* driver_fn,
+                                                                     struct TpuDriver* driver,
+                                                                     const char * model_repo) {
+  std::string repo_dir(model_repo);
+  for (const auto & entry : fs::directory_iterator(path))
+    std::cout << entry.path() << std::endl;
+}
+
 int main(int argc, char ** argv) {
   // Load and Initialize TPU Driver
   LOG_INFO("Loading and initializing TPU Driver");
@@ -33,35 +43,7 @@ int main(int argc, char ** argv) {
   LOG_INFO("Querying System Information");
   struct TpuSystemInfo* info = driver_fn.TpuDriver_QuerySystemInfo(driver);
   driver_fn.TpuDriver_FreeSystemInfo(info);
-
-  LOG_INFO("Compiling models in model directory");
-  const char* model = "models/model.txt";
-  FILE * fp = fopen(model, "r");
-  fseek(fp, 0, SEEK_END);
-  long int prog_size = ftell(fp);
-  fseek(fp, 0, SEEK_SET);
-  char * program = (char *) malloc(prog_size + 1);
-  fread(program, 1, prog_size, fp);
-  fclose(fp);
-
-
-  ASSIGN_OR_RETURN_ON_NULL(TpuCompiledProgramHandle* cph,
-    driver_fn.TpuDriver_CompileProgramFromText(driver, program, 1, 0, NULL));
-
-  // Load programs onto TPU and allocate buffers for in/out
-  ASSIGN_OR_RETURN_ON_NULL(CompiledProgramShape* shape,
-    driver_fn.TpuDriver_GetCompiledProgramShape(cph));
-
-  ASSIGN_OR_RETURN_ON_NULL(TpuLoadedProgramHandle* lph,
-    driver_fn.TpuDriver_LoadProgram(driver, 0, cph, 1, compile_events));
-
-  printf("%d", shape->bytes);
-
-  ASSIGN_OR_RETURN_ON_NULL(TpuEvent* unload_event,
-    driver_fn.UnloadProgram(driver, lph, 0, NULL));
-
-  driver_fn.FreeEvent(unload_event);
-  driver_fn.FreeCompiledProgramHandle(cph);
+  driver_fn.TpuDriver_Close(driver);
 
   // Close driver handle
   dlclose(handle);
