@@ -5,11 +5,14 @@
 #include <memory>
 #include <iostream>
 #include <regex>
+#include <vector>
 
 #include "logging.h"
 #include "model.h"
 #include "macro.h"
 #include "libtpu.h"
+
+// TODO: Make drivers shared pointers
 
 void* LoadAndInitializeDriver(const char* shared_lib,
                               struct TpuDriverFn* driver_fn) {
@@ -33,35 +36,37 @@ char * ReadFileToBuffer(const char * path) {
   fseek(fp, 0, SEEK_END);
   size_t fsize = ftell(fp);
   fseek(fp, 0, SEEK_SET);
-  char * buffer = (char *)malloc(sizeof(char) * fsize + 1);
+  char * buffer = (char *) malloc(sizeof(char) * fsize + 1);
   fread(buffer, sizeof(char), fsize, fp);
   fclose(fp);
   return buffer;
 }
 
-void CompileModelsInModelRepo(struct TpuDriverFn* driver_fn,
+std::vector<std::unique_ptr<tpuserve::TPUServeModel>> CompileModelsInModelRepo(struct TpuDriverFn driver_fn,
                               struct TpuDriver* driver,
                               const char * model_repo) {
   std::filesystem::path repo_path(model_repo);
-  std::regex model_pattern(".*\\.txt$");
+  std::regex model_pattern(".*\\.hlo.txt$");
+  std::vector<std::unique_ptr<tpuserve::TPUServeModel>> models;
 
   for (const auto & entry : std::filesystem::directory_iterator(repo_path)) {
     const auto fname = entry.path().string();
     if (std::regex_match(fname, model_pattern)) {
       LOG_INFO("Found model entry %s", entry.path().string().c_str());
-      char * prog_buffer = ReadFileToBuffer(entry.path().string().c_str());
-      LOG_INFO("Compiling... %s", prog_buffer);
+      char * prog = ReadFileToBuffer(entry.path().string().c_str());
+      LOG_INFO("Compiling %s...", entry.path().string().c_str());
       struct TpuCompiledProgramHandle* cph =
-        (*driver_fn).TpuDriver_CompileProgramFromText(driver, prog_buffer, 1, 0, NULL);
-//      free(prog_buffer);
+        driver_fn.TpuDriver_CompileProgramFromText(driver, prog, 1, 0, NULL);
       if (cph) {
-        LOG_INFO("Successfully compiled entry %s", entry.path().string().c_str());
-        (*driver_fn).TpuDriver_FreeCompiledProgramHandle(cph);
-      } else {
-        LOG_ERROR("Unable to compile entry %s", entry.path().string().c_str());
+        LOG_INFO("Successfully compiled %s", entry.path().string().c_str());
+        std::vector<TpuBufferHandle*> in_handle({});
+        std::vector<TpuBufferHandle*> out_handle({});
+        models.push_back(std::make_unique<tpuserve::TPUServeModel>(driver_fn, driver, cph, std::move(in_handle), std::move(out_handle)));
       }
+      free(prog);
     }
   }
+  return std::move(models);
 }
 
 int main(int argc, char ** argv) {
@@ -76,11 +81,11 @@ int main(int argc, char ** argv) {
   LOG_INFO("Querying System Information");
   struct TpuSystemInfo* info = driver_fn.TpuDriver_QuerySystemInfo(driver);
   driver_fn.TpuDriver_FreeSystemInfo(info);
-  driver_fn.TpuDriver_Close(driver);
 
   // Attempt to compile and load models in model directory
-  CompileModelsInModelRepo(&driver_fn, driver, "models");
+  CompileModelsInModelRepo(driver_fn, driver, "models");
 
-  // Close driver handle
+  // Close driver handle and driver
+  driver_fn.TpuDriver_Close(driver);
   dlclose(handle);
 }

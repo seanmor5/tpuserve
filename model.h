@@ -9,7 +9,7 @@ namespace tpuserve {
 class TPUServeModel {
 public:
   TPUServeModel(struct TpuDriverFn driver_fn,
-                TpuDriver* driver,
+                struct TpuDriver* driver,
                 struct TpuCompiledProgramHandle* cph,
                 std::vector<struct TpuBufferHandle*> input_buffer_handles,
                 std::vector<struct TpuBufferHandle*> output_buffer_handles)
