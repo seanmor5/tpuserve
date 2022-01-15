@@ -8,17 +8,14 @@ namespace tpuserve {
     // If our model is loaded, unload it
     if (loaded_) {
       struct TpuEvent* unload_event =
-        driver_fn_.TpuDriver_UnloadProgram(driver_, lph_, num_execute_events_, execution_events_);
+        driver_fn_.TpuDriver_UnloadProgram(driver_, lph_, num_execution_events_, execution_events_);
 
       if (unload_event) {
         driver_fn_.TpuDriver_FreeEvent(unload_event);
       }
     }
 
-    // Free all execution events
-    for (auto event : execution_events_) {
-      driver_fn_.TpuDriver_FreeEvent(event);
-    }
+    // TODO: Free all execution events
 
     // Free the compiled program handle
     driver_fn_.TpuDriver_FreeCompiledProgramHandle(cph_);

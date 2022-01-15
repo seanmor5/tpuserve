@@ -2,12 +2,13 @@
 #define TPUSERVE_MODEL_H_
 
 #include "libtpu.h"
+#include <vector>
 
 namespace tpuserve {
 
 class TPUServeModel {
 public:
-  TPUServeModel(void * driver_fn,
+  TPUServeModel(struct TpuDriverFn driver_fn,
                 TpuDriver* driver,
                 struct TpuCompiledProgramHandle* cph,
                 std::vector<struct TpuBufferHandle*> input_buffer_handles,
@@ -28,15 +29,16 @@ public:
 
 private:
   // TODO: Is driver thread safe?
-  void * driver_fn_;
+  struct TpuDriverFn driver_fn_;
   struct TpuDriver* driver_;
   struct TpuCompiledProgramHandle* cph_;
   std::vector<struct TpuBufferHandle*> input_buffer_handles_;
   std::vector<struct TpuBufferHandle*> output_buffer_handles_;
   struct TpuLoadedProgramHandle* lph_;
+  bool loaded_ = false;
   struct TpuEvent** execution_events_ = NULL;
   int num_execution_events_ = 0;
-}
+};
 
 }
 #endif
