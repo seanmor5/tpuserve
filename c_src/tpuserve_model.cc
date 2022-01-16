@@ -4,7 +4,7 @@
 
 namespace tpuserve {
 
-  TPUServeModel::~TPUServeModel() {
+  Model::~Model() {
     // If our model is loaded, unload it
     if (loaded_) {
       struct TpuEvent* unload_event =

@@ -6,9 +6,9 @@
 
 namespace tpuserve {
 
-class TPUServeModel {
+class Model {
 public:
-  TPUServeModel(struct TpuDriverFn driver_fn,
+  Model(struct TpuDriverFn driver_fn,
                 struct TpuDriver* driver,
                 struct TpuCompiledProgramHandle* cph,
                 std::vector<struct TpuBufferHandle*> input_buffer_handles,
@@ -19,7 +19,7 @@ public:
                     input_buffer_handles_(std::move(input_buffer_handles)),
                     output_buffer_handles_(std::move(output_buffer_handles)) {}
 
-  ~TPUServeModel();
+  ~Model();
 
   struct TpuCompiledProgramHandle* compiled_program_handle() const { return cph_; }
 
