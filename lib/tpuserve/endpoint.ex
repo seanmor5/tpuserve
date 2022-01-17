@@ -3,8 +3,7 @@ defmodule TPUServe.Endpoint do
 
   plug Plug.Logger
   plug :match
-  plug Plug.Parsers, parser: [:json],
-                     pass: ["application/json"],
+  plug Plug.Parsers, parsers: [:json],
                      json_decoder: Jason
   plug :dispatch
 

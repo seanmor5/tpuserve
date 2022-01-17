@@ -46,16 +46,16 @@ defmodule TPUServe.ModelManager do
   end
 
   def start_link(repo, opts \\ []) do
-    GenServer.start_link(__MODULE__, repo, opts)
+    GenServer.start_link(__MODULE__, repo, name: __MODULE__)
   end
 
   def handle_call({:fetch, model}, _from, state) do
     case state[model] do
       nil ->
-        {:reply, {:error, :not_found}}
+        {:reply, {:error, :not_found}, state}
 
       model ->
-        {:reply, {:ok, model}}
+        {:reply, {:ok, model}, state}
     end
   end
 end
