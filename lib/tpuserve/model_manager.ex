@@ -30,6 +30,10 @@ defmodule TPUServe.ModelManager do
     end
   end
 
+  def fetch_model(model) do
+    GenServer.call(__MODULE__, {:fetch, model})
+  end
+
   defp try_load_models(model_paths) do
     driver = TPUServe.Driver.fetch!()
 
@@ -43,5 +47,15 @@ defmodule TPUServe.ModelManager do
 
   def start_link(repo, opts \\ []) do
     GenServer.start_link(__MODULE__, repo, opts)
+  end
+
+  def handle_call({:fetch, model}, _from, state) do
+    case state[model] do
+      nil ->
+        {:reply, {:error, :not_found}}
+
+      model ->
+        {:reply, {:ok, model}}
+    end
   end
 end
