@@ -24,6 +24,10 @@ ERL_NIF_TERM ok(ErlNifEnv* env);
 
 int get(ErlNifEnv* env, ERL_NIF_TERM term, std::string &var);
 
+int get_list(ErlNifEnv* env,
+             ERL_NIF_TERM list,
+             std::vector<ErlNifBinary> &var);
+
 // Template struct for resources. The struct lets us use templates
 // to store and retrieve open resources later on. This implementation
 // is the same as the approach taken in the goertzenator/nifpp
@@ -73,6 +77,8 @@ ERL_NIF_TERM get(ErlNifEnv* env, ERL_NIF_TERM term, T* &var) {
                            resource_object<T>::type,
                            reinterpret_cast<void**>(&var));
 }
+
+ERL_NIF_TERM make(ErlNifEnv * env, ErlNifBinary binary);
 
 // Creates a reference to the given resource of type T. We
 // use the move constructor by default because some XLA

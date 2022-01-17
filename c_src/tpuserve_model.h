@@ -4,6 +4,7 @@
 #include <vector>
 #include <string>
 
+#include "erl_nif.h"
 #include "libtpu.h"
 #include "tpuserve_driver.h"
 
@@ -21,6 +22,11 @@ public:
                     output_buffer_handles_(std::move(output_buffer_handles)) {}
 
   ~TPUServeModel();
+
+  // TODO: Status
+  void Predict(std::vector<ErlNifBinary> inputs, ErlNifBinary * output_buffer);
+
+  size_t output_buffer_size(int i) const { return output_buffer_handles_.at(i)->size_in_bytes; }
 
   struct TpuCompiledProgramHandle* compiled_program_handle() const { return cph_; }
 

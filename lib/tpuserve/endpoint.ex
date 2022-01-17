@@ -12,10 +12,12 @@ defmodule TPUServe.Endpoint do
   end
 
   post "/:endpoint" do
-    IO.inspect conn.body_params
+    inference_params = conn.body_params
+
     case TPUServe.ModelManager.fetch_model(endpoint) do
       {:ok, model} ->
-        send_resp(conn, 200, "Success")
+        reply = TPUServe.InferenceHandler.predict(model, inference_params)
+        send_resp(conn, 200, reply)
 
       _ ->
         send_resp(conn, 404, "not found")

@@ -48,6 +48,28 @@ namespace nif {
     return ret;
   }
 
+  int get_list(ErlNifEnv* env,
+             ERL_NIF_TERM list,
+             std::vector<ErlNifBinary> &var) {
+    unsigned int length;
+    if (!enif_get_list_length(env, list, &length)) return 0;
+    var.reserve(length);
+    ERL_NIF_TERM head, tail;
+
+    while (enif_get_list_cell(env, list, &head, &tail)) {
+      ErlNifBinary elem;
+      if (!get_binary(env, head, &elem)) return 0;
+      var.push_back(elem);
+      list = tail;
+    }
+    return 1;
+  }
+
+  ERL_NIF_TERM make(ErlNifEnv* env, ErlNifBinary var) {
+    return enif_make_binary(env, &var);
+  }
+
+
 } // namespace nif
 
 } // namespace tpuserve

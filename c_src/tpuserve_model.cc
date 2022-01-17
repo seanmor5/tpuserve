@@ -1,5 +1,6 @@
 #include <string>
 
+#include "erl_nif.h"
 #include "libtpu.h"
 #include "tpuserve_model.h"
 #include "tpuserve_driver.h"
@@ -43,6 +44,53 @@ namespace tpuserve {
     }
   }
 
+  // TODO: Status
+  // TODO: Multiple outputs
+  // Assumes output buffer is allocated properly
+  void Predict(std::vector<ErlNifBinary> &inputs, ErlNifBinary * output_buffer) {
+    if (NULL == lph_) {
+      LOG_ERROR("Inference Error: Model was not properly loaded");
+      return;
+    }
+
+    // Populate input buffers
+    std::vector<struct TpuEvent*> transfer_events;
+    transfer_events.reserve(input_buffer_handles_.size());
+    for (int i = 0; i < input_buffer_handles_.size(); i++) {
+      // TODO: Cleanup on another thread?
+      struct TpuEvent * allocation_event = input_allocation_events_.at(i);
+      struct TpuBufferHandle * inp_handle = input_buffer_handles_.at(i);
+      struct TpuEvent * transfer_event =
+        driver_->driver_fn().TpuDriver_TransferToDevice(
+          driver_->driver(), inputs.at(i).data, inp_handle, 1, allocation_event
+        );
+
+      transfer_events.push_back(transfer_event);
+    }
+
+    // Execute Model
+    DeviceAssignment device_assignment = {NULL, 0};
+    struct TpuEvent * execution_event =
+      driver_->driver_fn().TpuDriver_ExecuteProgram(
+        driver_->driver(), lph_, input_buffer_handles_.size(),
+        &input_buffer_handles_[0], output_buffer_handles_.size(),
+        &output_buffer_handles_[0], device_assignment, transfer_events.size(),
+        &transfer_events[0]
+      );
+
+    // Transfer from device
+    struct TpuBufferHandle * obh = output_buffer_handles_.at(0);
+    struct TpuEvent * transfer_event =
+      driver_->driver_fn().TpuDriver_TransferFromDevice(
+        driver, obh, output_buffer->data, 1, execution_event
+      )
+
+    // Clean up
+    execution_events_.push_back(execution_event);
+    // TODO: Free every event
+    return;
+  }
+
   // TODO: Move this function somewhere else
   // TODO: StatusOr
   TPUServeModel * CompileModel(TPUServeDriver * driver, std::string& model_path) {
@@ -57,6 +105,13 @@ namespace tpuserve {
     struct TpuCompiledProgramHandle * cph =
       driver->driver_fn().TpuDriver_CompileProgramFromText(driver->driver(), model_text, 1, 0, NULL);
 
-    return new TPUServeModel(driver, cph, {}, {});
+    struct TpuBufferHandle * input_handle_1 =
+      driver->driver_fn().TpuDriver_Allocate(driver, 0, 1, 128*32*4, 0, NULL);
+    struct TpuBufferHandle * input_handle_2 =
+      driver->driver_fn().TpuDriver_Allocate(driver, 0, 1, 128*8*4, 0, NULL);
+    struct TpuBufferHandle * output_handle_1 =
+      driver->driver_fn().TpuDriver_Allocate(driver, 0, 1, 8*32*4, 0, NULL);
+
+    return new TPUServeModel(driver, cph, {input_handle_1, input_handle_2}, {output_handle_1});
   }
 } // namespace tpuserve

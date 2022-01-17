@@ -12,6 +12,8 @@ defmodule TPUServe.ModelManager do
   require Logger
   use GenServer
 
+  # TODO: Make model thread safe
+
   def init(repo) do
     model_paths =
       repo
