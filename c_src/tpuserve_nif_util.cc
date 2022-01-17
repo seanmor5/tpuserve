@@ -20,6 +20,32 @@ namespace nif {
     return enif_make_atom(env, "ok");
   }
 
+  int get(ErlNifEnv* env, ERL_NIF_TERM term, std::string &var) {
+    unsigned len;
+    int ret = enif_get_list_length(env, term, &len);
+
+    if (!ret) {
+      ErlNifBinary bin;
+      ret = enif_inspect_binary(env, term, &bin);
+      if (!ret) {
+        return 0;
+      }
+      var = std::string((const char*)bin.data, bin.size);
+      return ret;
+    }
+
+    var.resize(len+1);
+    ret = enif_get_string(env, term, &*(var.begin()), var.size(), ERL_NIF_LATIN1);
+
+    if (ret > 0) {
+      var.resize(ret-1);
+    } else if (ret == 0) {
+      var.resize(0);
+    } else {}
+
+    return ret;
+  }
+
 } // namespace nif
 
 } // namespace tpuserve

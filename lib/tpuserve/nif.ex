@@ -8,4 +8,6 @@ defmodule TPUServe.NIF do
   end
 
   def init_driver, do: :erlang.nif_error(:undef)
+
+  def load_model(_driver, _model_path), do: :erlang.nif_error(:undef)
 end

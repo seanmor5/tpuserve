@@ -5,11 +5,32 @@
 #include "tpuserve_driver.h"
 #include "libtpu.h"
 
+void free_driver(ErlNifEnv * env, void * obj) {
+  tpuserve::TPUServeDriver ** driver =
+    reinterpret_cast<tpuserve::TPUServeDriver**>(obj);
+
+  if (*driver != nullptr) {
+    delete *driver;
+    *driver = nullptr;
+  }
+}
+
+void free_model(ErlNifEnv * env, void * obj) {
+  tpuserve::TPUServeModel ** model =
+    reinterpret_cast<tpuserve::TPUServeModel**>(obj);
+
+  if (*model != nullptr) {
+    delete *model;
+    *model = nullptr;
+  }
+}
+
 static int open_resources(ErlNifEnv * env) {
   const char * mod = "TPUServe";
 
   int status = (
-    tpuserve::nif::open_resource<tpuserve::TPUServeDriver*>(env, mod, "TPUServeDriver")
+    tpuserve::nif::open_resource<tpuserve::TPUServeDriver*>(env, mod, "TPUServeDriver", free_driver) &&
+    tpuserve::nif::open_resource<tpuserve::TPUServeModel*>(env, mode, "TPUServeModel", free_model)
   );
 
   return status ? INIT_SUCCESS : INIT_FAILURE;
@@ -36,8 +57,27 @@ ERL_NIF_TERM init_driver(ErlNifEnv * env, int argc, const ERL_NIF_TERM argv[]) {
   return tpuserve::nif::ok(env, tpuserve::nif::make<tpuserve::TPUServeDriver*>(env, tpuserve_driver));
 }
 
+ERL_NIF_TERM load_model(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
+  if (argc != 2) {
+    return tpuserve::nif::error(env, "Bad argument count.");
+  }
+
+  std::string model_path;
+  tpuserve::TPUServeDriver ** tpuserve_driver;
+
+  if (!tpuserve::nif::get<tpuserve::TPUServeDriver*>(env, argv[0], tpuserve_driver)) {
+    tpuserve::nif::error(env, "Unable to get TPUServeDriver.");
+  }
+  if (!tpuserve::nif::get(env, argv[1], model_path)) {
+    tpuserve::nif::error(env, "Unable to get model path.");
+  }
+
+  return tpuserve::nif::ok(env, tpuserve::nif::make<tpuserve::TPUServeModel*>(env, tpuserve_model));
+}
+
 static ErlNifFunc tpuserve_funcs[] = {
-  {"init_driver", 0, init_driver, ERL_NIF_DIRTY_JOB_IO_BOUND}
+  {"init_driver", 0, init_driver, ERL_NIF_DIRTY_JOB_IO_BOUND},
+  {"load_model", 2, load_model, ERL_NIF_DIRTY_JOB_IO_BOUND}
 };
 
 ERL_NIF_INIT(Elixir.TPUServe.NIF, tpuserve_funcs, &load, NULL, NULL, NULL);
