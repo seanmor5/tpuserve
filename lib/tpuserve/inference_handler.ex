@@ -13,7 +13,7 @@ defmodule TPUServe.InferenceHandler do
       |> Map.values()
       |> Enum.map(&Base.decode64!/1)
 
-    {:ok, result} = TPUServe.NIF.predict(model, inputs)
+    {:ok, result} = TPUServe.NIF.predict(model, input_buffers)
 
     Base.encode64(result)
   end

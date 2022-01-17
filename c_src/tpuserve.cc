@@ -97,10 +97,10 @@ ERL_NIF_TERM predict(ErlNifEnv * env, int argc, const ERL_NIF_TERM argv[]) {
   }
 
   ErlNifBinary output;
-  size_t out_buffer_size = tpuserve_model->GetOutputBufferSize();
+  size_t out_buffer_size = (*tpuserve_model)->output_buffer_size(0);
   enif_alloc_binary(out_buffer_size, &output);
 
-  tpuserve_model->Predict(inputs, &output);
+  (*tpuserve_model)->Predict(inputs, &output);
 
   return tpuserve::nif::ok(env, tpuserve::nif::make(env, output));
 }
@@ -108,7 +108,7 @@ ERL_NIF_TERM predict(ErlNifEnv * env, int argc, const ERL_NIF_TERM argv[]) {
 static ErlNifFunc tpuserve_funcs[] = {
   {"init_driver", 0, init_driver, ERL_NIF_DIRTY_JOB_IO_BOUND},
   {"load_model", 2, load_model, ERL_NIF_DIRTY_JOB_IO_BOUND},
-  {"predict", 3, predict, ERL_NIF_DIRTY_JOB_IO_BOUND}
+  {"predict", 2, predict, ERL_NIF_DIRTY_JOB_IO_BOUND}
 };
 
 ERL_NIF_INIT(Elixir.TPUServe.NIF, tpuserve_funcs, &load, NULL, NULL, NULL);

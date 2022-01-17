@@ -1,10 +1,12 @@
 defmodule TPUServe.Endpoint do
   use Plug.Router
+  use Plug.ErrorHandler
 
   plug Plug.Logger
   plug :match
   plug Plug.Parsers, parsers: [:json],
-                     json_decoder: Jason
+                     json_decoder: Jason,
+                     pass: ["application/json"]
   plug :dispatch
 
   get "/status" do
@@ -26,5 +28,13 @@ defmodule TPUServe.Endpoint do
 
   match _ do
     send_resp(conn, 404, "not found")
+  end
+
+  @impl Plug.ErrorHandler
+  def handle_errors(conn, err) do
+    IO.inspect err.kind
+    IO.inspect err.reason
+    IO.inspect err.stack
+    send_resp(conn, conn.status, "Error")
   end
 end

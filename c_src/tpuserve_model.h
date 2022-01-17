@@ -4,8 +4,8 @@
 #include <vector>
 #include <string>
 
-#include "erl_nif.h"
 #include "libtpu.h"
+#include "tpuserve_nif_util.h"
 #include "tpuserve_driver.h"
 
 namespace tpuserve {
@@ -15,16 +15,12 @@ public:
   TPUServeModel(TPUServeDriver * driver,
                 struct TpuCompiledProgramHandle* cph,
                 std::vector<struct TpuBufferHandle*> input_buffer_handles,
-                std::vector<struct TpuBufferHandle*> output_buffer_handles)
-                  : driver_(driver),
-                    cph_(cph),
-                    input_buffer_handles_(std::move(input_buffer_handles)),
-                    output_buffer_handles_(std::move(output_buffer_handles)) {}
+                std::vector<struct TpuBufferHandle*> output_buffer_handles);
 
   ~TPUServeModel();
 
   // TODO: Status
-  void Predict(std::vector<ErlNifBinary> inputs, ErlNifBinary * output_buffer);
+  void Predict(std::vector<ErlNifBinary> &inputs, ErlNifBinary * output_buffer);
 
   size_t output_buffer_size(int i) const { return output_buffer_handles_.at(i)->size_in_bytes; }
 
@@ -41,7 +37,7 @@ private:
   std::vector<struct TpuBufferHandle*> output_buffer_handles_;
   struct TpuLoadedProgramHandle* lph_;
   bool loaded_ = false;
-  struct TpuEvent** execution_events_ = NULL;
+  std::vector<TpuEvent*> execution_events_;
   int num_execution_events_ = 0;
 };
 

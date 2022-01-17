@@ -1,5 +1,6 @@
-#include "erl_nif.h"
+#include <vector>
 
+#include "erl_nif.h"
 #include "tpuserve_nif_util.h"
 
 namespace tpuserve {
@@ -46,6 +47,10 @@ namespace nif {
     } else {}
 
     return ret;
+  }
+
+  int get_binary(ErlNifEnv* env, ERL_NIF_TERM term, ErlNifBinary* var) {
+    return enif_inspect_binary(env, term, var);
   }
 
   int get_list(ErlNifEnv* env,

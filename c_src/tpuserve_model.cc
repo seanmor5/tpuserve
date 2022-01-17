@@ -1,17 +1,34 @@
 #include <string>
 
-#include "erl_nif.h"
 #include "libtpu.h"
+#include "logging.h"
+#include "tpuserve_nif_util.h"
 #include "tpuserve_model.h"
 #include "tpuserve_driver.h"
 
 namespace tpuserve {
 
+  TPUServeModel::TPUServeModel(TPUServeDriver * driver,
+                               TpuCompiledProgramHandle * cph,
+                               std::vector<TpuBufferHandle*> input_buffer_handles,
+                               std::vector<TpuBufferHandle*> output_buffer_handles) : driver_(driver),
+                                                                                      cph_(cph),
+                                                                                      input_buffer_handles_(std::move(input_buffer_handles)),
+                                                                                      output_buffer_handles_(std::move(output_buffer_handles)) {
+  if (NULL == cph) {
+    LOG_ERROR("Program was not compiled successfully.");
+    return;
+  }
+
+  TpuEvent * compile_events[] = { cph->event };
+  lph_ = driver->driver_fn().TpuDriver_LoadProgram(driver->driver(), 0, cph, 1, compile_events);
+}
+
   TPUServeModel::~TPUServeModel() {
     // If our model is loaded, unload it
     if (loaded_) {
       struct TpuEvent* unload_event =
-        driver_->driver_fn().TpuDriver_UnloadProgram(driver_->driver(), lph_, num_execution_events_, execution_events_);
+        driver_->driver_fn().TpuDriver_UnloadProgram(driver_->driver(), lph_, num_execution_events_, &execution_events_[0]);
 
       if (unload_event) {
         driver_->driver_fn().TpuDriver_FreeEvent(unload_event);
@@ -47,7 +64,7 @@ namespace tpuserve {
   // TODO: Status
   // TODO: Multiple outputs
   // Assumes output buffer is allocated properly
-  void Predict(std::vector<ErlNifBinary> &inputs, ErlNifBinary * output_buffer) {
+  void TPUServeModel::Predict(std::vector<ErlNifBinary> &inputs, ErlNifBinary * output_buffer) {
     if (NULL == lph_) {
       LOG_ERROR("Inference Error: Model was not properly loaded");
       return;
@@ -58,11 +75,11 @@ namespace tpuserve {
     transfer_events.reserve(input_buffer_handles_.size());
     for (int i = 0; i < input_buffer_handles_.size(); i++) {
       // TODO: Cleanup on another thread?
-      struct TpuEvent * allocation_event = input_allocation_events_.at(i);
       struct TpuBufferHandle * inp_handle = input_buffer_handles_.at(i);
+      struct TpuEvent * allocate_event[] = { inp_handle->event };
       struct TpuEvent * transfer_event =
         driver_->driver_fn().TpuDriver_TransferToDevice(
-          driver_->driver(), inputs.at(i).data, inp_handle, 1, allocation_event
+          driver_->driver(), inputs.at(i).data, inp_handle, 1, allocate_event
         );
 
       transfer_events.push_back(transfer_event);
@@ -80,10 +97,11 @@ namespace tpuserve {
 
     // Transfer from device
     struct TpuBufferHandle * obh = output_buffer_handles_.at(0);
+    struct TpuEvent * execution_events[] = { execution_event };
     struct TpuEvent * transfer_event =
       driver_->driver_fn().TpuDriver_TransferFromDevice(
-        driver, obh, output_buffer->data, 1, execution_event
-      )
+        driver_->driver(), obh, output_buffer->data, 1, execution_events
+      );
 
     // Clean up
     execution_events_.push_back(execution_event);
@@ -106,11 +124,11 @@ namespace tpuserve {
       driver->driver_fn().TpuDriver_CompileProgramFromText(driver->driver(), model_text, 1, 0, NULL);
 
     struct TpuBufferHandle * input_handle_1 =
-      driver->driver_fn().TpuDriver_Allocate(driver, 0, 1, 128*32*4, 0, NULL);
+      driver->driver_fn().TpuDriver_Allocate(driver->driver(), 0, 1, 128*32*4, 0, NULL);
     struct TpuBufferHandle * input_handle_2 =
-      driver->driver_fn().TpuDriver_Allocate(driver, 0, 1, 128*8*4, 0, NULL);
+      driver->driver_fn().TpuDriver_Allocate(driver->driver(), 0, 1, 128*8*4, 0, NULL);
     struct TpuBufferHandle * output_handle_1 =
-      driver->driver_fn().TpuDriver_Allocate(driver, 0, 1, 8*32*4, 0, NULL);
+      driver->driver_fn().TpuDriver_Allocate(driver->driver(), 0, 1, 8*32*4, 0, NULL);
 
     return new TPUServeModel(driver, cph, {input_handle_1, input_handle_2}, {output_handle_1});
   }

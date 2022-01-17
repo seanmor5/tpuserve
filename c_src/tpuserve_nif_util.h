@@ -3,7 +3,7 @@
 
 #include <string>
 #include <utility>
-#include <new>
+#include <vector>
 
 #include "erl_nif.h"
 
@@ -23,6 +23,8 @@ ERL_NIF_TERM ok(ErlNifEnv* env, ERL_NIF_TERM term);
 ERL_NIF_TERM ok(ErlNifEnv* env);
 
 int get(ErlNifEnv* env, ERL_NIF_TERM term, std::string &var);
+
+int get_binary(ErlNifEnv* env, ERL_NIF_TERM term, ErlNifBinary* var);
 
 int get_list(ErlNifEnv* env,
              ERL_NIF_TERM list,

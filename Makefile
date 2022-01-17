@@ -6,7 +6,7 @@ LDFLAGS = -ldl
 
 ARTIFACT = $(PRIV_DIR)/libtpuserve.so
 
-SRCS = c_src/libtpu.h c_src/tpuserve_nif_util.h c_src/tpuserve_nif_util.cc \
+SRCS = c_src/libtpu.h c_src/logging.h c_src/tpuserve_nif_util.h c_src/tpuserve_nif_util.cc \
        c_src/tpuserve_driver.h c_src/tpuserve_driver.cc \
        c_src/tpuserve_model.h c_src/tpuserve_model.cc c_src/tpuserve.cc
 
