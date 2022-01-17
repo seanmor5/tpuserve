@@ -1,4 +1,4 @@
-defmodule Tpuserve.NIF do
+defmodule TPUServe.NIF do
   @moduledoc false
   @on_load :__on_load__
 

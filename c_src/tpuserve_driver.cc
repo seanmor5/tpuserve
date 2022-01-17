@@ -1,20 +1,21 @@
+#include <stdlib.h>
+#include <dlfcn.h>
+
 #include "tpuserve_driver.h"
 #include "libtpu.h"
 #include "logging.h"
 
-namespace tpuserver {
+namespace tpuserve {
 
   TPUServeDriver::~TPUServeDriver() {
     // Close driver
-    if (driver_fn) {
-      if (driver) {
-        driver_fn.TpuDriver_Close(driver);
-      }
+    if (driver_) {
+      driver_fn_.TpuDriver_Close(driver_);
     }
 
     // Close dlsym handle
-    if (handle) {
-      dlclose(handle);
+    if (handle_) {
+      dlclose(handle_);
     }
   }
 
@@ -30,7 +31,7 @@ namespace tpuserver {
     struct TpuDriverFn driver_fn;
     PrototypeTpuDriver_Initialize* initialize_fn;
     *(void**)(&initialize_fn) = dlsym(handle, "TpuDriver_Initialize");
-    initialize_fn(driver_fn, true);
+    initialize_fn(&driver_fn, true);
 
     // Open driver
     struct TpuDriver * driver = driver_fn.TpuDriver_Open("local://");

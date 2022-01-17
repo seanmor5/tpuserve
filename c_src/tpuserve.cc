@@ -1,5 +1,3 @@
-#include <dlfcn.h>
-
 #define INIT_SUCCESS 0
 #define INIT_FAILURE -1
 
@@ -11,7 +9,7 @@ static int open_resources(ErlNifEnv * env) {
   const char * mod = "TPUServe";
 
   int status = (
-    tpuserve::nif::open_resource<tpuserve::TPUServeDriver>(env, mod, "TPUServeDriver")
+    tpuserve::nif::open_resource<tpuserve::TPUServeDriver*>(env, mod, "TPUServeDriver")
   );
 
   return status ? INIT_SUCCESS : INIT_FAILURE;
@@ -33,9 +31,9 @@ ERL_NIF_TERM init_driver(ErlNifEnv * env, int argc, const ERL_NIF_TERM argv[]) {
   const char * shared_lib = "libtpu.so";
 
   // TODO: Status type
-  TPUServeDriver * tpuserve_driver = GetTPUServeDriver(shared_lib);
+  tpuserve::TPUServeDriver * tpuserve_driver = tpuserve::GetTPUServeDriver(shared_lib);
 
-  return tpuserve::nif::ok(env, tpuserve::nif::make<TPUServeDriver*>(env, tpuserve_driver));
+  return tpuserve::nif::ok(env, tpuserve::nif::make<tpuserve::TPUServeDriver*>(env, tpuserve_driver));
 }
 
 static ErlNifFunc tpuserve_funcs[] = {

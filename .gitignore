@@ -1,3 +1,7 @@
+# libtpu specifics
+c_src/libtpu.h
+libtpu.so
+
 # The directory Mix will write compiled artifacts to.
 /_build/
 

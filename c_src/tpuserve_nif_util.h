@@ -1,11 +1,25 @@
 #ifndef TPUSERVE_NIF_UTIL_H_
 #define TPUSERVE_NIF_UTIL_H_
 
+#include <utility>
+#include <new>
+
 #include "erl_nif.h"
 
 namespace tpuserve {
 
 namespace nif {
+
+// Status helpers
+
+// Helper for returning `{:error, msg}` from NIF.
+ERL_NIF_TERM error(ErlNifEnv* env, const char* msg);
+
+// Helper for returning `{:ok, term}` from NIF.
+ERL_NIF_TERM ok(ErlNifEnv* env, ERL_NIF_TERM term);
+
+// Helper for returning `:ok` from NIF.
+ERL_NIF_TERM ok(ErlNifEnv* env);
 
 // Template struct for resources. The struct lets us use templates
 // to store and retrieve open resources later on. This implementation
@@ -48,6 +62,27 @@ int open_resource(ErlNifEnv* env,
     resource_object<T>::type = type;
   }
   return 1;
+}
+// Returns a resource of the given template type T.
+template <typename T>
+ERL_NIF_TERM get(ErlNifEnv* env, ERL_NIF_TERM term, T* &var) {
+  return enif_get_resource(env, term,
+                           resource_object<T>::type,
+                           reinterpret_cast<void**>(&var));
+}
+
+// Creates a reference to the given resource of type T. We
+// use the move constructor by default because some XLA
+// objects delete the copy-constructor. The move is intended
+// to represent a transfer of ownership of the object to
+// the VM.
+template <typename T>
+ERL_NIF_TERM make(ErlNifEnv* env, T &var) {
+  void* ptr = enif_alloc_resource(resource_object<T>::type, sizeof(T));
+  new(ptr) T(std::move(var));
+  ERL_NIF_TERM ret = enif_make_resource(env, ptr);
+  enif_release_resource(ptr);
+  return ret;
 }
 
 } // namespace nif

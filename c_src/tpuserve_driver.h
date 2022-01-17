@@ -1,6 +1,8 @@
 #ifndef TPUSERVE_DRIVER_H_
 #define TPUSERVE_DRIVER_H_
 
+#include <stdlib.h>
+
 #include "libtpu.h"
 
 // Class which holds a pointer to the driver, driver_fn,
@@ -36,18 +38,18 @@ public:
   ~TPUServeDriver();
 
 
-  struct TpuDriverFn& driver_fn() const { return driver_fn_; }
+  struct TpuDriverFn driver_fn() const { return driver_fn_; }
   struct TpuDriver * driver() const { return driver_; }
 
 private:
   // Pointer to libtpu.so dlsym handle
   void * handle_ = NULL;
-  // Pointer to TpuDriverFn
-  struct TpuDriverFn driver_fn_ = NULL;
+  // TpuDriverFn Struct
+  struct TpuDriverFn driver_fn_;
   // Pointer to TpuDriver
   struct TpuDriver * driver_ = NULL;
-}
+};
 
-TPUServeDriver GetTPUServeDriver(const char * shared_lib);
+TPUServeDriver * GetTPUServeDriver(const char * shared_lib);
 }
 #endif
