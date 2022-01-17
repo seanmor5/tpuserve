@@ -5,9 +5,7 @@ defmodule TPUServe.Driver do
   @name __MODULE__
 
   def fetch! do
-    :persistent_term.get({__MODULE__, :driver}, nil) || (
-      GenServer.call(@name, :fetch, :infinity)
-    )
+    :persistent_term.get({__MODULE__, :driver}, nil) || GenServer.call(@name, :fetch, :infinity)
   end
 
   @doc false

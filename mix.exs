@@ -23,8 +23,10 @@ defmodule TPUServe.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:cowboy, "~> 2.9"},
-      {:elixir_make, "~> 0.6", runtime: false}
+      {:plug_cowboy, "~> 2.0"},
+      {:jason, "~> 1.2"},
+      {:elixir_make, "~> 0.6", runtime: false},
+      {:nx, "~> 0.1.0", only: :test}
     ]
   end
 end

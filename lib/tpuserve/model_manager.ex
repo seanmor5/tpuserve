@@ -36,8 +36,8 @@ defmodule TPUServe.ModelManager do
     model_paths
     |> Enum.map(fn path -> {Path.basename(path, @model_extension), path} end)
     |> Map.new(fn {endpoint, path} ->
-        {:ok, model_ref} = TPUServe.NIF.load_model(driver, path)
-        {endpoint, model_ref}
+      {:ok, model_ref} = TPUServe.NIF.load_model(driver, path)
+      {endpoint, model_ref}
     end)
   end
 
