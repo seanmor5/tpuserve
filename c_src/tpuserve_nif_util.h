@@ -1,6 +1,7 @@
 #ifndef TPUSERVE_NIF_UTIL_H_
 #define TPUSERVE_NIF_UTIL_H_
 
+#include <string>
 #include <utility>
 #include <new>
 

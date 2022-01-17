@@ -2,6 +2,7 @@
 #define TPUSERVE_MODEL_H_
 
 #include <vector>
+#include <string>
 
 #include "libtpu.h"
 #include "tpuserve_driver.h"
@@ -40,5 +41,5 @@ private:
 
 TPUServeModel * CompileModel(TPUServeDriver * driver, std::string& model_path);
 
-}
+} // namespace tpuserve
 #endif

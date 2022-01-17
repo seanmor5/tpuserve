@@ -1,8 +1,11 @@
 #define INIT_SUCCESS 0
 #define INIT_FAILURE -1
 
+#include <string>
+
 #include "tpuserve_nif_util.h"
 #include "tpuserve_driver.h"
+#include "tpuserve_model.h"
 #include "libtpu.h"
 
 void free_driver(ErlNifEnv * env, void * obj) {
@@ -30,7 +33,7 @@ static int open_resources(ErlNifEnv * env) {
 
   int status = (
     tpuserve::nif::open_resource<tpuserve::TPUServeDriver*>(env, mod, "TPUServeDriver", free_driver) &&
-    tpuserve::nif::open_resource<tpuserve::TPUServeModel*>(env, mode, "TPUServeModel", free_model)
+    tpuserve::nif::open_resource<tpuserve::TPUServeModel*>(env, mod, "TPUServeModel", free_model)
   );
 
   return status ? INIT_SUCCESS : INIT_FAILURE;
@@ -71,6 +74,9 @@ ERL_NIF_TERM load_model(ErlNifEnv* env, int argc, const ERL_NIF_TERM argv[]) {
   if (!tpuserve::nif::get(env, argv[1], model_path)) {
     tpuserve::nif::error(env, "Unable to get model path.");
   }
+
+  tpuserve::TPUServeModel * tpuserve_model =
+    tpuserve::CompileModel(*tpuserve_driver, model_path);
 
   return tpuserve::nif::ok(env, tpuserve::nif::make<tpuserve::TPUServeModel*>(env, tpuserve_model));
 }

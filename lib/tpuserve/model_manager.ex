@@ -19,7 +19,7 @@ defmodule TPUServe.ModelManager do
       |> Path.wildcard()
 
     case try_load_models(model_paths) do
-      %{} ->
+      models when models == %{} ->
         Logger.warn("Manager did not successfully load any models")
         {:ok, %{}}
 
@@ -31,14 +31,17 @@ defmodule TPUServe.ModelManager do
   end
 
   defp try_load_models(model_paths) do
+    driver = TPUServe.Driver.fetch!()
+
     model_paths
     |> Enum.map(fn path -> {Path.basename(path, @model_extension), path} end)
     |> Map.new(fn {endpoint, path} ->
-      {endpoint, path}
+        {:ok, model_ref} = TPUServe.NIF.load_model(driver, path)
+        {endpoint, model_ref}
     end)
   end
 
   def start_link(repo, opts \\ []) do
-    GenServe.start_link(__MODULE__, repo, opts)
+    GenServer.start_link(__MODULE__, repo, opts)
   end
 end

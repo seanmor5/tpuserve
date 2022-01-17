@@ -12,7 +12,9 @@ defmodule TPUServe.Driver do
 
   @doc false
   def start_link(_) do
-    {:ok, driver} = :persistent_term.put({__MODULE__, :driver}, driver)
+    Logger.info("Starting TPUServe Driver")
+    {:ok, driver} = TPUServe.NIF.init_driver()
+    :persistent_term.put({__MODULE__, :driver}, driver)
     GenServer.start_link(__MODULE__, :ok, name: __MODULE__)
   end
 
@@ -22,8 +24,8 @@ defmodule TPUServe.Driver do
   end
 
   @impl true
-  def handle_call(:fetch, _from, state) do
+  def handle_call(:fetch, _from, _state) do
     driver = :persistent_term.get({__MODULE__, :driver}, nil)
-    {:reply, diver}
+    {:reply, driver}
   end
 end

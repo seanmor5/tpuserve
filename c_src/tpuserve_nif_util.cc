@@ -1,3 +1,5 @@
+#include "erl_nif.h"
+
 #include "tpuserve_nif_util.h"
 
 namespace tpuserve {
