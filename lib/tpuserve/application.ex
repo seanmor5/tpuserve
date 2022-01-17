@@ -6,7 +6,8 @@ defmodule TPUServe.Application do
 
   def start(_type, _args) do
     children = [
-      TPUServe.Driver
+      TPUServe.Driver,
+      {TPUServe.ModelManager, ["models"]}
     ]
 
     Supervisor.start_link(children, name: __MODULE__, strategy: :one_for_one)

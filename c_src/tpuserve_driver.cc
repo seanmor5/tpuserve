@@ -10,11 +10,13 @@ namespace tpuserve {
   TPUServeDriver::~TPUServeDriver() {
     // Close driver
     if (driver_) {
+      LOG_INFO("Closing TpuDriver");
       driver_fn_.TpuDriver_Close(driver_);
     }
 
     // Close dlsym handle
     if (handle_) {
+      LOG_INFO("Closing libtpu.so handle");
       dlclose(handle_);
     }
   }
