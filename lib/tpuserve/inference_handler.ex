@@ -11,10 +11,8 @@ defmodule TPUServe.InferenceHandler do
     input_buffers =
       inputs
       |> Map.values()
-      |> Enum.map(&Base.decode64!/1)
 
     {:ok, result} = TPUServe.NIF.predict(model, input_buffers)
-
-    Base.encode64(result)
+    Msgpax.pack!(%{"result" => Msgpax.Bin.new(result)})
   end
 end

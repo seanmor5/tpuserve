@@ -124,12 +124,10 @@ namespace tpuserve {
       driver->driver_fn().TpuDriver_CompileProgramFromText(driver->driver(), model_text, 1, 0, NULL);
 
     struct TpuBufferHandle * input_handle_1 =
-      driver->driver_fn().TpuDriver_Allocate(driver->driver(), 0, 1, 128*32*4, 0, NULL);
-    struct TpuBufferHandle * input_handle_2 =
-      driver->driver_fn().TpuDriver_Allocate(driver->driver(), 0, 1, 128*8*4, 0, NULL);
+      driver->driver_fn().TpuDriver_Allocate(driver->driver(), 0, 1, 1*3*224*224, 0, NULL);
     struct TpuBufferHandle * output_handle_1 =
-      driver->driver_fn().TpuDriver_Allocate(driver->driver(), 0, 1, 8*32*4, 0, NULL);
+      driver->driver_fn().TpuDriver_Allocate(driver->driver(), 0, 1, 1*1000, 0, NULL);
 
-    return new TPUServeModel(driver, cph, {input_handle_1, input_handle_2}, {output_handle_1});
+    return new TPUServeModel(driver, cph, {input_handle_1}, {output_handle_1});
   }
 } // namespace tpuserve

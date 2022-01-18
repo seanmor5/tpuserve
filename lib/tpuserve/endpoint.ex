@@ -4,9 +4,9 @@ defmodule TPUServe.Endpoint do
 
   plug Plug.Logger
   plug :match
-  plug Plug.Parsers, parsers: [:json],
+  plug Plug.Parsers, parsers: [:json, Msgpax.PlugParser],
                      json_decoder: Jason,
-                     pass: ["application/json"]
+                     pass: ["application/json", "application/msgpack"]
   plug :dispatch
 
   get "/status" do
