@@ -5,11 +5,13 @@ defmodule TPUServe.Application do
   use Application
 
   def start(_type, _args) do
-    endpoint = Plug.Cowboy.child_spec(
-      scheme: :http,
-      plug: TPUServe.Endpoint,
-      options: [port: 4000] # TODO: option
-    )
+    endpoint =
+      Plug.Cowboy.child_spec(
+        scheme: :http,
+        plug: TPUServe.Endpoint,
+        # TODO: option
+        options: [port: 4000]
+      )
 
     children = [
       TPUServe.Driver,

@@ -43,6 +43,7 @@ defmodule TPUServe.ModelManager do
     |> Enum.map(fn path -> {Path.basename(path, @model_extension), path} end)
     |> Map.new(fn {endpoint, path} ->
       {:ok, model_ref} = TPUServe.NIF.load_model(driver, path)
+      :sleeplocks.new(1, [name: model_ref])
       {endpoint, model_ref}
     end)
   end
@@ -51,13 +52,13 @@ defmodule TPUServe.ModelManager do
     GenServer.start_link(__MODULE__, repo, name: __MODULE__)
   end
 
-  def handle_call({:fetch, model}, _from, state) do
+  def handle_call({:run, model}, _from, state) do
     case state[model] do
       nil ->
         {:reply, {:error, :not_found}, state}
 
-      model ->
-        {:reply, {:ok, model}, state}
+      model_ref ->
+        {:reply, {:ok, model_ref}, state}
     end
   end
 end
