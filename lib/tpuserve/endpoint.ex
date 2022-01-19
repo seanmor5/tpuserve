@@ -18,6 +18,7 @@ defmodule TPUServe.Endpoint do
 
     case TPUServe.ModelManager.fetch_model(endpoint) do
       {:ok, model} ->
+        IO.inspect conn
         reply = TPUServe.InferenceHandler.predict(model, inference_params)
         send_resp(conn, 200, reply)
 
