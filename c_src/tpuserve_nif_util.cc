@@ -23,6 +23,10 @@ namespace nif {
     return enif_make_atom(env, "ok");
   }
 
+  int get(ErlNifEnv* env, ERL_NIF_TERM term, int* var) {
+    return enif_get_int(env, term, var);
+  }
+
   int get(ErlNifEnv* env, ERL_NIF_TERM term, std::string &var) {
     unsigned len;
     int ret = enif_get_list_length(env, term, &len);
@@ -51,6 +55,21 @@ namespace nif {
 
   int get_binary(ErlNifEnv* env, ERL_NIF_TERM term, ErlNifBinary* var) {
     return enif_inspect_binary(env, term, var);
+  }
+
+  int get_list(ErlNifEnv* env, ERL_NIF_TERM list, std::vector<int> &var) {
+    unsigned int length;
+    if (!enif_get_list_length(env, list, &length)) return 0;
+    var.reserve(length);
+    ERL_NIF_TERM head, tail;
+
+    while (enif_get_list_cell(env, list, &head, &tail)) {
+      int elem;
+      if (!get(env, head, &elem)) return 0;
+      var.push_back(elem);
+      list = tail;
+    }
+    return 1;
   }
 
   int get_list(ErlNifEnv* env,

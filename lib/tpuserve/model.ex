@@ -7,7 +7,7 @@ defmodule TPUServe.Model do
     input_sizes = Enum.map(config.inputs, &get_tensor_spec_size/1)
     output_sizes = Enum.map(config.outputs, &get_tensor_spec_size/1)
 
-    TPUServe.NIF.load_model(driver, file, input_sizes, output_sizes)
+    {:ok, model} = TPUServe.NIF.load_model(driver, file, input_sizes, output_sizes)
   end
 
   # TODO: This should be elsewhere

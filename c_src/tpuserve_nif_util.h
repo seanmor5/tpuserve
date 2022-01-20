@@ -22,9 +22,12 @@ ERL_NIF_TERM ok(ErlNifEnv* env, ERL_NIF_TERM term);
 // Helper for returning `:ok` from NIF.
 ERL_NIF_TERM ok(ErlNifEnv* env);
 
+int get(ErlNifEnv* env, ERL_NIF_TERM term, int *var);
 int get(ErlNifEnv* env, ERL_NIF_TERM term, std::string &var);
 
 int get_binary(ErlNifEnv* env, ERL_NIF_TERM term, ErlNifBinary* var);
+
+int get_list(ErlNifEnv* env, ERL_NIF_TERM list, std::vector<int> &var);
 
 int get_list(ErlNifEnv* env,
              ERL_NIF_TERM list,

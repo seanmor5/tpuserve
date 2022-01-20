@@ -21,7 +21,8 @@ defmodule TPUServe.ModelManager do
     model_paths =
       repo
       |> File.ls!()
-      |> Enum.filter(&File.dir?(Path.join(repo, &1)))
+      |> Enum.map(&Path.join(repo, &1))
+      |> Enum.filter(&File.dir?/1)
 
     case try_load_models(model_paths) do
       models when models == %{} ->
@@ -47,24 +48,27 @@ defmodule TPUServe.ModelManager do
     |> Enum.map(fn path ->
       with {:ok, {endpoint, config_file, model_file}} <- get_model_files(path),
            {:ok, config} <- File.read(config_file),
-           {:ok, %ModelConfig{} = model_config} <- ModelConfig.parse!(config),
-           {:ok, model_ref} <- Model.load(driver, model_file, model_config)
+           # TODO: Make this {:ok, ...}
+           %ModelConfig{} = model_config <- ModelConfig.parse!(config),
+           {:ok, model_ref} <- Model.load(driver, model_file, model_config) do
         {:ok, {endpoint, model_ref}}
       else
         # TODO: Match error
         _ ->
-          Logger.error("Failed to load model #{endpoint}")
+          Logger.error("Failed to load model")
           {:error, :bad}
+      end
     end)
     |> Enum.filter(fn
       {:ok, _} -> true
       {:error, _} -> false
     end)
-    |> Map.new()
+    |> Map.new(fn {:ok, {k, v}} -> {k, v} end)
   end
 
   defp get_model_files(path) do
-    endpoint = Path.dirname(path) |> IO.inspect
+    endpoint = Path.basename(path)
+
     # TODO: Add verbose error for both failure paths
     config_file = Path.join(path, @config_file)
     model_file = Path.join(path, @model_file)
