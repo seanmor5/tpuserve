@@ -1,7 +1,7 @@
 defmodule TPUServe.Protocol do
   def encode_response(result, "application/json") do
     result
-    |> Base64.encode!()
+    |> Base.encode64()
     |> Jason.encode!()
   end
 

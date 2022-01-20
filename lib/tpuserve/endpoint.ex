@@ -21,13 +21,14 @@ defmodule TPUServe.Endpoint do
     inference_params = conn.body_params
     content_type = get_req_header(conn, "content-type")
 
-    with {:ok, model} <- TPUServe.ModelManager.fetch_model(endpoint),
-         {:ok, inference_result} <- TPUServe.InferenceHandler.predict(model, inference_params),
+    with {:ok, model_ref} <- TPUServe.ModelManager.fetch_model(endpoint),
+         {:ok, inference_result} <- TPUServe.InferenceHandler.predict(endpoint, model_ref, inference_params),
          {:ok, response_body} <- TPUServe.Protocol.encode_response(inference_result, content_type) do
       send_resp(conn, 200, response_body)
     else
-      # TODO: Errors :)
-      send_resp(conn, 404, "sorry")
+      err -># TODO: Errors :)
+        IO.inspect err
+        send_resp(conn, 404, "sorry")
     end
   end
 
