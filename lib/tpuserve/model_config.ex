@@ -5,7 +5,7 @@ defmodule TPUServe.ModelConfig do
   alias __MODULE__, as: ModelConfig
 
   @enforce_keys [:name, :inputs, :outputs]
-  defstruct :name, :inputs, :outputs
+  defstruct [:name, :inputs, :outputs]
 
   def parse!(config) do
     config
@@ -18,7 +18,7 @@ defmodule TPUServe.ModelConfig do
   # and do as much validation as possible so we don't
   # screw up the NIF
   defp normalize!(config) do
-    %{name: name, inputs: inputs, outputs: outputs} = config
+    %{"name" => name, "inputs" => inputs, "outputs" => outputs} = config
 
     name = normalize_name!(name)
     inputs =
@@ -31,16 +31,17 @@ defmodule TPUServe.ModelConfig do
       |> Enum.map(&normalize_tensor_spec!/1)
       |> ensure_unique_names!()
 
-    %{config |
+    %{
       name: name,
       inputs: inputs,
-      outputs: outputs}
+      outputs: outputs
+     }
   end
 
   # Name represents the key in the model manager and
   # as a consequence needs to be acceptable as a URL
   # endpoint - TODO
-  defp normalize_name(name) do
+  defp normalize_name!(name) do
     name
   end
 
@@ -48,8 +49,8 @@ defmodule TPUServe.ModelConfig do
   # to validate the shape to ensure all dimensions are
   # strictly positive and the type to ensure it is an
   # acceptable TPU type
-  defp normalize_tensor_spec(tensor_spec) do
-    %{name: name, shape: shape, type: type} = tensor_spec
+  defp normalize_tensor_spec!(tensor_spec) do
+    %{"name" => name, "shape" => shape, "type" => type} = tensor_spec
 
     # TODO: name
     shape = normalize_shape!(name, shape)
@@ -59,9 +60,17 @@ defmodule TPUServe.ModelConfig do
   end
 
   defp normalize_shape!(name, shape) when is_list(shape) do
+    valid_shape? =
+      shape
+      |> Enum.map(& &1 > 0)
+      |> Enum.all?()
+
+    unless valid_shape? do
+      raise ArgumentError, "invalid shape for tensor spec #{inspect(name)}:" <>
+                             " #{inspect(shape)}"
+    end
+
     shape
-    |> Enum.map(& &1 > 0)
-    |> Enum.all?()
   end
 
   defp normalize_shape!(name, shape) do
@@ -70,7 +79,7 @@ defmodule TPUServe.ModelConfig do
                             " #{inspect(shape)}"
   end
 
-  defp normalize_type(name, type) when is_binary(type) do
+  defp normalize_type!(name, type) when is_binary(type) do
     case type do
       "BF16" -> {:bf, 16}
       "F32" -> {:f, 32}
@@ -78,7 +87,7 @@ defmodule TPUServe.ModelConfig do
     end
   end
 
-  defp normalize_type(name, type) do
+  defp normalize_type!(name, type) do
     # TODO: Custom Error
     raise ArgumentError, "invalid type for tensor spec #{inspect(name)}:" <>
                             " #{inspect(type)}"

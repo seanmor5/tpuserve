@@ -4,7 +4,7 @@ defmodule TPUServe.ModelConfigTest do
   alias TPUServe.ModelConfig
 
   describe "parse!" do
-    resnet_config = """\
+    @resnet_config """
     {
       "name": "ResNet50",
       "inputs": [
@@ -25,7 +25,7 @@ defmodule TPUServe.ModelConfigTest do
     """
 
     test "resnet config" do
-      assert config = %ModelConfig{} = ModelConfig.parse!(resnet_config)
+      assert config = %ModelConfig{} = ModelConfig.parse!(@resnet_config)
       assert [image] = config.inputs
       assert [class] = config.outputs
       assert image.name == "image"
@@ -36,7 +36,7 @@ defmodule TPUServe.ModelConfigTest do
       assert class.type == {:f, 32}
     end
 
-    duplicate_input_names = """\
+    @duplicate_input_names """
     {
       "name": "ResNet50",
       "inputs": [
@@ -62,12 +62,12 @@ defmodule TPUServe.ModelConfigTest do
     """
 
     test "raises on duplicate input names" do
-      assert_raise ArgumentError, ~r/tensor specs/, fn ->
-        ModelConfig.parse!(duplicate_input_names)
+      assert_raise ArgumentError, ~r/tensor spec/, fn ->
+        ModelConfig.parse!(@duplicate_input_names)
       end
     end
 
-    duplicate_output_names = """\
+    @duplicate_output_names """
     {
       "name": "ResNet50",
       "inputs": [
@@ -94,7 +94,7 @@ defmodule TPUServe.ModelConfigTest do
 
     test "raises on duplicate output names" do
       assert_raise ArgumentError, ~r/tensor spec/, fn ->
-        ModelConfig.parse!(duplicate_output_names)
+        ModelConfig.parse!(@duplicate_output_names)
       end
     end
   end
