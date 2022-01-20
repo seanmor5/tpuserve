@@ -1,19 +1,22 @@
 defmodule TPUServe.Driver do
   require Logger
   use GenServer
+  alias __MODULE__, as: Driver
 
-  @name __MODULE__
+  defstruct :ref
+
+  # TODO: Is driver thread safe?
+
+  def start_link(_) do
+    Logger.info("Starting TPUServe Driver")
+    {:ok, driver_ref} = TPUServe.NIF.init_driver()
+    driver = %Driver{ref: driver_ref}
+    :persistent_term.put({__MODULE__, :driver}, driver)
+    GenServer.start_link(__MODULE__, :ok, name: __MODULE__)
+  end
 
   def fetch! do
     :persistent_term.get({__MODULE__, :driver}, nil) || GenServer.call(@name, :fetch, :infinity)
-  end
-
-  @doc false
-  def start_link(_) do
-    Logger.info("Starting TPUServe Driver")
-    {:ok, driver} = TPUServe.NIF.init_driver()
-    :persistent_term.put({__MODULE__, :driver}, driver)
-    GenServer.start_link(__MODULE__, :ok, name: __MODULE__)
   end
 
   @impl true

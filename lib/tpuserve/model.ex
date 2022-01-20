@@ -2,12 +2,33 @@ defmodule TPUServe.Model do
   @moduledoc """
   Model Abstraction.
   """
+  alias __MODULE__, as: Model
 
-  def load(driver, file, config) do
+  defstruct [:driver, :ref]
+
+  @doc """
+  Loads the model.
+  """
+  def load(%Driver{} = driver, file, config) do
     input_sizes = Enum.map(config.inputs, &get_tensor_spec_size/1)
     output_sizes = Enum.map(config.outputs, &get_tensor_spec_size/1)
 
-    {:ok, model} = TPUServe.NIF.load_model(driver, file, input_sizes, output_sizes)
+    {:ok, model_ref} = TPUServe.NIF.load_model(driver, file, input_sizes, output_sizes)
+
+    %Model{driver: driver, ref: model_ref}
+  end
+
+  @doc """
+  Performs inference on inputs.
+  """
+  def predict(%Model{ref: model_ref}, inputs) do
+    # TODO: Inputs should map to correctly ordered
+    # buffers according to config
+    input_buffers =
+      inputs
+      |> Map.values()
+
+    TPUServe.NIF.predict(model_ref, input_buffers)
   end
 
   # TODO: This should be elsewhere

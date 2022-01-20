@@ -7,8 +7,7 @@ defmodule TPUServe.ModelManager do
   loaded program handles and input/output buffer handles.
   """
 
-  alias TPUServe.Model
-  alias TPUServe.ModelConfig
+  alias TPUServe.{Model, ModelConfig}
   require Logger
   use GenServer
 
@@ -16,6 +15,14 @@ defmodule TPUServe.ModelManager do
   @config_file "config.json"
 
   # TODO: Make model thread safe
+
+  def start_link(repo, opts \\ []) do
+    GenServer.start_link(__MODULE__, repo, name: __MODULE__)
+  end
+
+  def fetch(endpoint) do
+    GenServer.call(__MODULE__, {:fetch, endpoint})
+  end
 
   def init(repo) do
     model_paths =
@@ -36,10 +43,6 @@ defmodule TPUServe.ModelManager do
     end
   end
 
-  def fetch_model(model) do
-    GenServer.call(__MODULE__, {:fetch, model})
-  end
-
   defp try_load_models(model_paths) do
     # TODO: Error?
     driver = TPUServe.Driver.fetch!()
@@ -50,8 +53,8 @@ defmodule TPUServe.ModelManager do
            {:ok, config} <- File.read(config_file),
            # TODO: Make this {:ok, ...}
            %ModelConfig{} = model_config <- ModelConfig.parse!(config),
-           {:ok, model_ref} <- Model.load(driver, model_file, model_config) do
-        {:ok, {endpoint, model_ref}}
+           {:ok, %Model{} = model} <- Model.load(driver, model_file, model_config) do
+        {:ok, {endpoint, model}}
       else
         # TODO: Match error
         _ ->
@@ -75,20 +78,14 @@ defmodule TPUServe.ModelManager do
 
     cond do
       not File.exists?(model_file) ->
-        Logger.error("Failed to load model #{endpoint}. Could not find model file")
         {:error, :missing_model_file}
 
       not File.exists?(config_file) ->
-        Logger.error("Failed to load model #{endpoint}. Could not find config file")
         {:error, :missing_config_file}
 
       true ->
         {:ok, {endpoint, config_file, model_file}}
     end
-  end
-
-  def start_link(repo, opts \\ []) do
-    GenServer.start_link(__MODULE__, repo, name: __MODULE__)
   end
 
   def handle_call({:fetch, model}, _from, state) do

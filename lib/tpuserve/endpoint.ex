@@ -2,6 +2,8 @@ defmodule TPUServe.Endpoint do
   use Plug.Router
   use Plug.ErrorHandler
 
+  alias TPUServe.{Model, ModelManager, Protocol}
+
   plug(Plug.Logger)
   plug(:match)
 
@@ -21,13 +23,13 @@ defmodule TPUServe.Endpoint do
     inference_params = conn.body_params
     content_type = get_req_header(conn, "content-type")
 
-    with {:ok, model_ref} <- TPUServe.ModelManager.fetch_model(endpoint),
-         {:ok, inference_result} <- TPUServe.InferenceHandler.predict(endpoint, model_ref, inference_params),
-         {:ok, response_body} <- TPUServe.Protocol.encode_response(inference_result, content_type) do
+    with {:ok, %Model{} = model} <- ModelManager.fetch(endpoint),
+         {:ok, inference_result} <- Model.predict(model, inference_params),
+         {:ok, response_body} <- Protocol.encode(inference_result, content_type) do
       send_resp(conn, 200, response_body)
     else
-      err -># TODO: Errors :)
-        IO.inspect err
+      _ ->
+        # TODO: Errors :)
         send_resp(conn, 404, "sorry")
     end
   end
