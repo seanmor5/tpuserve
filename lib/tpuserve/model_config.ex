@@ -21,6 +21,7 @@ defmodule TPUServe.ModelConfig do
     %{"name" => name, "inputs" => inputs, "outputs" => outputs} = config
 
     name = normalize_name!(name)
+
     inputs =
       inputs
       |> Enum.map(&normalize_tensor_spec!/1)
@@ -35,7 +36,7 @@ defmodule TPUServe.ModelConfig do
       name: name,
       inputs: inputs,
       outputs: outputs
-     }
+    }
   end
 
   # Name represents the key in the model manager and
@@ -62,12 +63,13 @@ defmodule TPUServe.ModelConfig do
   defp normalize_shape!(name, shape) when is_list(shape) do
     valid_shape? =
       shape
-      |> Enum.map(& &1 > 0)
+      |> Enum.map(&(&1 > 0))
       |> Enum.all?()
 
     unless valid_shape? do
-      raise ArgumentError, "invalid shape for tensor spec #{inspect(name)}:" <>
-                             " #{inspect(shape)}"
+      raise ArgumentError,
+            "invalid shape for tensor spec #{inspect(name)}:" <>
+              " #{inspect(shape)}"
     end
 
     shape
@@ -75,8 +77,9 @@ defmodule TPUServe.ModelConfig do
 
   defp normalize_shape!(name, shape) do
     # TODO: Custom Error
-    raise ArgumentError, "inavlid shape for tensor spec #{inspect(name)}:" <>
-                            " #{inspect(shape)}"
+    raise ArgumentError,
+          "inavlid shape for tensor spec #{inspect(name)}:" <>
+            " #{inspect(shape)}"
   end
 
   defp normalize_type!(name, type) when is_binary(type) do
@@ -89,15 +92,16 @@ defmodule TPUServe.ModelConfig do
 
   defp normalize_type!(name, type) do
     # TODO: Custom Error
-    raise ArgumentError, "invalid type for tensor spec #{inspect(name)}:" <>
-                            " #{inspect(type)}"
+    raise ArgumentError,
+          "invalid type for tensor spec #{inspect(name)}:" <>
+            " #{inspect(type)}"
   end
 
   defp ensure_unique_names!(tensor_specs) do
     are_all_unique? =
       tensor_specs
       |> Enum.map(& &1.name)
-      |> then(&Enum.count(&1) == Enum.count(Enum.uniq(&1)))
+      |> then(&(Enum.count(&1) == Enum.count(Enum.uniq(&1))))
 
     unless are_all_unique? do
       raise ArgumentError, "tensor spec names must all be unique"

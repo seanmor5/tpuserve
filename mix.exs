@@ -24,11 +24,10 @@ defmodule TPUServe.MixProject do
   defp deps do
     [
       {:plug_cowboy, "~> 2.0"},
-      {:sleeplocks, "~> 1.0"},
       {:jason, "~> 1.2"},
       {:elixir_make, "~> 0.6", runtime: false},
-      {:nx, "~> 0.1.0"},
-      {:msgpax, "~> 2.3.0"}
+      {:msgpax, "~> 2.3.0"},
+      {:nx, "~> 0.1.0", only: [:test]}
     ]
   end
 end

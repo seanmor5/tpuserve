@@ -15,11 +15,11 @@ defmodule TPUServe.Endpoint do
 
   plug(:dispatch)
 
-  get "/status" do
+  get "/v1/status" do
     send_resp(conn, 200, "Up")
   end
 
-  post "/inference/v1/:endpoint" do
+  post "/v1/inference/:endpoint" do
     inference_params = conn.body_params
     content_type = get_req_header(conn, "content-type")
 
