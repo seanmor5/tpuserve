@@ -41,7 +41,10 @@ private:
   int num_execution_events_ = 0;
 };
 
-TPUServeModel * CompileModel(TPUServeDriver * driver, std::string& model_path);
+TPUServeModel * CompileModel(TPUServeDriver * driver,
+                             std::string& model_path,
+                             std::vector<int> input_sizes,
+                             std::vector<int> output_sizes);
 
 } // namespace tpuserve
 #endif
