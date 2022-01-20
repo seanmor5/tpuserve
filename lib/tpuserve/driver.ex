@@ -3,7 +3,9 @@ defmodule TPUServe.Driver do
   use GenServer
   alias __MODULE__, as: Driver
 
-  defstruct :ref
+  @name __MODULE__
+
+  defstruct [:ref]
 
   # TODO: Is driver thread safe?
 

@@ -7,7 +7,7 @@ defmodule TPUServe.ModelManager do
   loaded program handles and input/output buffer handles.
   """
 
-  alias TPUServe.{Model, ModelConfig}
+  alias TPUServe.{Driver, Model, ModelConfig}
   require Logger
   use GenServer
 
@@ -45,7 +45,7 @@ defmodule TPUServe.ModelManager do
 
   defp try_load_models(model_paths) do
     # TODO: Error?
-    driver = TPUServe.Driver.fetch!()
+    driver = Driver.fetch!()
 
     model_paths
     |> Enum.map(fn path ->

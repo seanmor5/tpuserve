@@ -2,6 +2,8 @@ defmodule TPUServe.Model do
   @moduledoc """
   Model Abstraction.
   """
+
+  alias TPUServe.Driver
   alias __MODULE__, as: Model
 
   defstruct [:driver, :ref]
@@ -9,13 +11,14 @@ defmodule TPUServe.Model do
   @doc """
   Loads the model.
   """
-  def load(%Driver{} = driver, file, config) do
+  def load(%Driver{ref: driver}, file, config) do
     input_sizes = Enum.map(config.inputs, &get_tensor_spec_size/1)
     output_sizes = Enum.map(config.outputs, &get_tensor_spec_size/1)
 
     {:ok, model_ref} = TPUServe.NIF.load_model(driver, file, input_sizes, output_sizes)
+    model = %Model{driver: driver, ref: model_ref}
 
-    %Model{driver: driver, ref: model_ref}
+    {:ok, model}
   end
 
   @doc """
