@@ -61,12 +61,14 @@ ERL_NIF_TERM init_driver(ErlNifEnv * env, int argc, const ERL_NIF_TERM argv[]) {
 }
 
 ERL_NIF_TERM load_model(ErlNifEnv * env, int argc, const ERL_NIF_TERM argv[]) {
-  if (argc != 2) {
+  if (argc != 4) {
     return tpuserve::nif::error(env, "Bad argument count.");
   }
 
   std::string model_path;
   tpuserve::TPUServeDriver ** tpuserve_driver;
+  std::vector<int> input_sizes;
+  std::vector<int> output_sizes;
 
   if (!tpuserve::nif::get<tpuserve::TPUServeDriver*>(env, argv[0], tpuserve_driver)) {
     return tpuserve::nif::error(env, "Unable to get TPUServeDriver.");
@@ -74,9 +76,15 @@ ERL_NIF_TERM load_model(ErlNifEnv * env, int argc, const ERL_NIF_TERM argv[]) {
   if (!tpuserve::nif::get(env, argv[1], model_path)) {
     return tpuserve::nif::error(env, "Unable to get model path.");
   }
+  if (!tpuserve::nif::get(env, argv[2], input_sizes)) {
+    return tpuserve::nif::error(env, "Unable to get input sizes.");
+  }
+  if (!tpuserve::nif::get(env, argv[3], output_sizes)) {
+    return tpuserve::nif::error(env, "Unable to get output sizes.");
+  }
 
   tpuserve::TPUServeModel * tpuserve_model =
-    tpuserve::CompileModel(*tpuserve_driver, model_path);
+    tpuserve::CompileModel(*tpuserve_driver, model_path, input_sizes, output_sizes);
 
   return tpuserve::nif::ok(env, tpuserve::nif::make<tpuserve::TPUServeModel*>(env, tpuserve_model));
 }

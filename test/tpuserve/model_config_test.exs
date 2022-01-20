@@ -97,5 +97,11 @@ defmodule TPUServe.ModelConfigTest do
         ModelConfig.parse!(@duplicate_output_names)
       end
     end
+
+    # TODO: Test bad shape
+    # TODO: Test no inputs
+    # TODO: Test no outputs
+    # TODO: Test missing info
+    # TODO: Test bad / unsupported type
   end
 end

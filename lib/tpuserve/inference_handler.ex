@@ -13,9 +13,6 @@ defmodule TPUServe.InferenceHandler do
       inputs
       |> Map.values()
 
-    :sleeplocks.execute(String.to_atom(model), fn ->
-      # TODO: Map outputs to names correctl
-      TPUServe.NIF.predict(model_ref, input_buffers)
-    end)
+    TPUServe.NIF.predict(model_ref, input_buffers)
   end
 end

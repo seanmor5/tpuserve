@@ -111,7 +111,10 @@ namespace tpuserve {
 
   // TODO: Move this function somewhere else
   // TODO: StatusOr
-  TPUServeModel * CompileModel(TPUServeDriver * driver, std::string& model_path) {
+  TPUServeModel * CompileModel(TPUServeDriver * driver,
+                               std::string& model_path,
+                               std::vector<int> input_sizes,
+                               std::vector<int> output_sizes) {
     FILE * fp = fopen(model_path.c_str(), "r");
     fseek(fp, 0, SEEK_END);
     size_t prog_size = ftell(fp);
@@ -123,11 +126,22 @@ namespace tpuserve {
     struct TpuCompiledProgramHandle * cph =
       driver->driver_fn().TpuDriver_CompileProgramFromText(driver->driver(), model_text, 1, 0, NULL);
 
-    struct TpuBufferHandle * input_handle_1 =
-      driver->driver_fn().TpuDriver_Allocate(driver->driver(), 0, 1, 1*3*224*224, 0, NULL);
-    struct TpuBufferHandle * output_handle_1 =
-      driver->driver_fn().TpuDriver_Allocate(driver->driver(), 0, 1, 1*1000, 0, NULL);
+    std::vector<struct TpuBufferHandle*> input_handles;
+    input_handles.reserve(input_sizes.size());
+    for (auto size : input_sizes) {
+      struct TpuBufferHandle * input_handle =
+        driver->driver_fn().TpuDriver_Allocate(driver->driver(), 0, 1, size, 0, NULL);
+      input_handles.push_back(input_handle);
+    }
 
-    return new TPUServeModel(driver, cph, {input_handle_1}, {output_handle_1});
+    std::vector<struct TpuBufferHandle*> output_handles;
+    output_handles.reserve(output_sizes.size());
+    for (auto size : output_sizes) {
+      struct TpuBufferHandle * output_handle =
+        driver->driver_fn().TpuDriver_Allocate(driver->driver(), 0, 1, size, 0, NULL);
+      output_handles.push_back(output_handle);
+    }
+
+    return new TPUServeModel(driver, cph, std::move(input_handles), std::move(output_handles));
   }
 } // namespace tpuserve
