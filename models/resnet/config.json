@@ -1,0 +1,17 @@
+    {
+      "name": "ResNet50",
+      "inputs": [
+        {
+          "name": "image",
+          "shape": [1, 224, 224, 3],
+          "type": "F32"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "class",
+          "shape": [1, 1000],
+          "type": "F32"
+        }
+      ]
+    }
