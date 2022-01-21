@@ -100,13 +100,26 @@ namespace tpuserve {
     struct TpuEvent * execution_events[] = { execution_event };
     struct TpuEvent * transfer_event =
       driver_->driver_fn().TpuDriver_TransferFromDevice(
-        driver_->driver(), obh, output_buffer->data, 1, execution_events
+        driver_->driver(), obh, (*output_buffer).data, 1, execution_events
       );
+
+    TpuStatus * status = driver_->driver_fn().TpuDriver_EventAwait(transfer_event, 10000000);
+
+    LOG_INFO("%d", status->code);
+    LOG_INFO("%s", status->msg);
 
     // Clean up
     execution_events_.push_back(execution_event);
     // TODO: Free every event
     return;
+  }
+
+  // TODO: Move this function elsewhere
+  struct TpuAllocationShape GetTpuAllocationShape(size_t size) {
+    TpuAllocationShape shape_;
+    shape_.size = size;
+    shape_.bytes = malloc(shape_.size);
+    return shape_;
   }
 
   // TODO: Move this function somewhere else
@@ -129,8 +142,9 @@ namespace tpuserve {
     std::vector<struct TpuBufferHandle*> input_handles;
     input_handles.reserve(input_sizes.size());
     for (auto size : input_sizes) {
+      struct TpuAllocationShape shape = GetTpuAllocationShape(size);
       struct TpuBufferHandle * input_handle =
-        driver->driver_fn().TpuDriver_Allocate(driver->driver(), 0, 1, size, 0, NULL);
+        driver->driver_fn().TpuDriver_AllocateShape(driver->driver(), 0, 1, shape, 0, NULL);
       input_handles.push_back(input_handle);
     }
 

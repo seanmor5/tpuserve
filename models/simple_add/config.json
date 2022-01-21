@@ -1,0 +1,22 @@
+{
+    "name": "simple_add",
+    "inputs": [
+      {
+        "name": "a",
+        "shape": [],
+        "type": "F32"
+      },
+      {
+        "name": "b",
+        "shape": [],
+        "type": "F32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "out",
+        "shape": [],
+        "type": "F32"
+      }
+    ]
+  }
