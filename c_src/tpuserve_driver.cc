@@ -1,8 +1,9 @@
 #include <stdlib.h>
 #include <dlfcn.h>
 
+#include "third_party/libtpu.h"
+
 #include "tpuserve_driver.h"
-#include "libtpu.h"
 #include "logging.h"
 
 namespace tpuserve {

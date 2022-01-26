@@ -46,7 +46,7 @@ defmodule TPUServe.ModelConfig do
     name
   end
 
-  # Tensor spec is a name, a shape, and a type. We need
+  # Tensor spec is a name and a shape. We need
   # to validate the shape to ensure all dimensions are
   # strictly positive and the type to ensure it is an
   # acceptable TPU type

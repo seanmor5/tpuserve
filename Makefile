@@ -1,15 +1,12 @@
 PRIV_DIR = priv
 
-CFLAGS = -fPIC -I$(ERTS_INCLUDE_DIR) -shared
+ARTIFACT = libtpuserve.so
 
-LDFLAGS = -ldl
+CMAKE_FLAGS = -B$(PRIV_DIR)/build \
+-DC_SRC=c_src -DERTS_INCLUDE_DIR=$(ERTS_INCLUDE_DIR)
 
-ARTIFACT = $(PRIV_DIR)/libtpuserve.so
-
-SRCS = c_src/libtpu.h c_src/logging.h c_src/tpuserve_nif_util.h c_src/tpuserve_nif_util.cc \
-       c_src/tpuserve_driver.h c_src/tpuserve_driver.cc \
-       c_src/tpuserve_model.h c_src/tpuserve_model.cc c_src/tpuserve.cc
-
-$(ARTIFACT): $(SRCS)
-	mkdir -p $(PRIV_DIR)
-	$(CXX) $(CFLAGS) $(SRCS) -o $(ARTIFACT) $(LDFLAGS)
+all:
+	mkdir -p $(PRIV_DIR)/build
+	cmake $(CMAKE_FLAGS) .
+	cd $(PRIV_DIR)/build && make
+	mv $(PRIV_DIR)/build/$(ARTIFACT) $(PRIV_DIR)/$(ARTIFACT)

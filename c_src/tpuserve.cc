@@ -3,10 +3,13 @@
 
 #include <string>
 
+#include "third_party/libtpu.h"
+#include "xla_data.pb.h"
+
 #include "tpuserve_nif_util.h"
 #include "tpuserve_driver.h"
 #include "tpuserve_model.h"
-#include "libtpu.h"
+#include "tpuserve_client.h"
 
 void free_driver(ErlNifEnv * env, void * obj) {
   tpuserve::TPUServeDriver ** driver =
@@ -61,14 +64,12 @@ ERL_NIF_TERM init_driver(ErlNifEnv * env, int argc, const ERL_NIF_TERM argv[]) {
 }
 
 ERL_NIF_TERM load_model(ErlNifEnv * env, int argc, const ERL_NIF_TERM argv[]) {
-  if (argc != 4) {
+  if (argc != 2) {
     return tpuserve::nif::error(env, "Bad argument count.");
   }
 
   std::string model_path;
   tpuserve::TPUServeDriver ** tpuserve_driver;
-  std::vector<int> input_sizes;
-  std::vector<int> output_sizes;
 
   if (!tpuserve::nif::get<tpuserve::TPUServeDriver*>(env, argv[0], tpuserve_driver)) {
     return tpuserve::nif::error(env, "Unable to get TPUServeDriver.");
@@ -76,15 +77,9 @@ ERL_NIF_TERM load_model(ErlNifEnv * env, int argc, const ERL_NIF_TERM argv[]) {
   if (!tpuserve::nif::get(env, argv[1], model_path)) {
     return tpuserve::nif::error(env, "Unable to get model path.");
   }
-  if (!tpuserve::nif::get_list(env, argv[2], input_sizes)) {
-    return tpuserve::nif::error(env, "Unable to get input sizes.");
-  }
-  if (!tpuserve::nif::get_list(env, argv[3], output_sizes)) {
-    return tpuserve::nif::error(env, "Unable to get output sizes.");
-  }
 
   tpuserve::TPUServeModel * tpuserve_model =
-    tpuserve::CompileModel(*tpuserve_driver, model_path, input_sizes, output_sizes);
+    tpuserve::client::CompileModel(*tpuserve_driver, model_path);
 
   return tpuserve::nif::ok(env, tpuserve::nif::make<tpuserve::TPUServeModel*>(env, tpuserve_model));
 }
@@ -105,7 +100,7 @@ ERL_NIF_TERM predict(ErlNifEnv * env, int argc, const ERL_NIF_TERM argv[]) {
   }
 
   ErlNifBinary output;
-  size_t out_buffer_size = (*tpuserve_model)->output_buffer_size(0);
+  size_t out_buffer_size = (*tpuserve_model)->output_buffer_size();
   enif_alloc_binary(out_buffer_size, &output);
 
   (*tpuserve_model)->Predict(inputs, &output);
@@ -115,7 +110,7 @@ ERL_NIF_TERM predict(ErlNifEnv * env, int argc, const ERL_NIF_TERM argv[]) {
 
 static ErlNifFunc tpuserve_funcs[] = {
   {"init_driver", 0, init_driver, ERL_NIF_DIRTY_JOB_IO_BOUND},
-  {"load_model", 4, load_model, ERL_NIF_DIRTY_JOB_IO_BOUND},
+  {"load_model", 2, load_model, ERL_NIF_DIRTY_JOB_IO_BOUND},
   {"predict", 2, predict, ERL_NIF_DIRTY_JOB_IO_BOUND}
 };
 

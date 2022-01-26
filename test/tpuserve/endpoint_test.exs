@@ -5,6 +5,7 @@ defmodule TPUServe.EndpointTest do
   alias TPUServe.Endpoint
 
   import Nx.Defn
+  import TestUtils
 
   describe "status" do
     test "returns 200" do
@@ -16,7 +17,7 @@ defmodule TPUServe.EndpointTest do
   end
 
   describe "inference" do
-    Nx.Defn.default_options(compiler: EXLA)
+
     defn simple_add(a, b), do: a + b
 
     test "simple, multi-input, names in order, msgpack" do
@@ -35,7 +36,7 @@ defmodule TPUServe.EndpointTest do
 
       assert response.status == 200
       res = Msgpax.unpack!(response.resp_body)
-      assert Nx.from_binary(res, {:s, 32}) == expected
+      assert Nx.from_binary(res, {:s, 32}) |> Nx.reshape({}) == expected
     end
 
     defn prog(a, b), do: Nx.dot(a, b) / 3.14159
@@ -46,7 +47,7 @@ defmodule TPUServe.EndpointTest do
       expected = prog(a, b)
 
       a_enc = a |> Nx.to_binary |> Msgpax.Bin.new()
-      b_enc = a |> Nx.to_binary |> Msgpax.Bin.new()
+      b_enc = b |> Nx.to_binary |> Msgpax.Bin.new()
       enc = %{a: a_enc, b: b_enc} |> Msgpax.pack!() |> IO.iodata_to_binary()
 
       response =
@@ -55,9 +56,13 @@ defmodule TPUServe.EndpointTest do
         |> Endpoint.call([])
 
       assert response.status == 200
-      bin = response.resp_body
-      res = Msgpax.unpack!(bin)
-      assert Nx.from_binary(res, {:f, 32}) |> Nx.reshape({8, 32}) == expected
+      res =
+        response.resp_body
+        |> Msgpax.unpack!()
+        |> Nx.from_binary({:f, 32})
+        |> Nx.reshape({8, 32})
+
+      assert_all_close!(res, expected)
     end
 
     # TODO: multi-input, names out of order

@@ -3,7 +3,7 @@
 
 #include <stdlib.h>
 
-#include "libtpu.h"
+#include "third_party/libtpu.h"
 
 // Class which holds a pointer to the driver, driver_fn,
 // and handler. On construction, this class:

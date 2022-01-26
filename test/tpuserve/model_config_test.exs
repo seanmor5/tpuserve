@@ -2,6 +2,7 @@ defmodule TPUServe.ModelConfigTest do
   use ExUnit.Case
 
   alias TPUServe.ModelConfig
+  alias TPUServe.Shape
 
   describe "parse!" do
     @resnet_config """
@@ -29,11 +30,7 @@ defmodule TPUServe.ModelConfigTest do
       assert [image] = config.inputs
       assert [class] = config.outputs
       assert image.name == "image"
-      assert image.shape == [1, 224, 224, 3]
-      assert image.type == {:f, 32}
       assert class.name == "class"
-      assert class.shape == [1, 1000]
-      assert class.type == {:f, 32}
     end
 
     @duplicate_input_names """
