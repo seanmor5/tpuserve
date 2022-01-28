@@ -27,8 +27,8 @@ defmodule TPUServe.MixProject do
       {:jason, "~> 1.2"},
       {:elixir_make, "~> 0.6", runtime: false},
       {:msgpax, "~> 2.3.0"},
-      {:exla, "~> 0.1.0-dev", github: "elixir-nx/nx", sparse: "exla", only: [:test]},
-      {:nx, "~> 0.1.0", only: [:test], override: true}
+      {:exla, "~> 0.1.0-dev", github: "elixir-nx/nx", sparse: "exla", branch: "sm-exla-export", only: [:test]},
+      {:nx, "~> 0.1.0-dev", github: "elixir-nx/nx", sparse: "nx", branch: "sm-exla-export", only: [:test], override: true}
     ]
   end
 end

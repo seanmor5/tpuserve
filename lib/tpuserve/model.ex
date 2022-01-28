@@ -21,13 +21,16 @@ defmodule TPUServe.Model do
   @doc """
   Performs inference on inputs.
   """
-  def predict(%Model{ref: model_ref}, inputs) do
-    # TODO: Inputs should map to correctly ordered
-    # buffers according to config and we should maybe
-    # ensure that the buffers are correctly sized
+  def predict(%Model{ref: model_ref, config: config}, inputs) do
     input_buffers =
-      inputs
-      |> Map.values()
+      config.inputs
+      |> Enum.map(fn inp ->
+        if Map.has_key?(inputs, inp.name) do
+          inputs[inp.name]
+        else
+          # TODO: Error here
+        end
+      end)
 
     TPUServe.NIF.predict(model_ref, input_buffers)
   end

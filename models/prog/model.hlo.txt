@@ -7,6 +7,7 @@ ENTRY xla_computation_ordered_wrapper.9 {
   dot.4 = f32[8,32]{0,1} dot(parameter.2, parameter.1), lhs_contracting_dims={1}, rhs_contracting_dims={0}
   constant.5 = f32[] constant(3.14159)
   broadcast.6 = f32[8,32]{0,1} broadcast(constant.5), dimensions={}
-  ROOT divide.7 = f32[8,32]{0,1} divide(dot.4, broadcast.6)
+  divide.7 = f32[8,32]{0,1} divide(dot.4, broadcast.6)
+  ROOT tuple.8 = (f32[8,32]{0,1}) tuple(divide.7)
 }
 

@@ -16,24 +16,20 @@ public:
   TPUServeModel(TPUServeDriver * driver,
                 struct TpuCompiledProgramHandle* cph,
                 std::vector<struct TpuBufferHandle*> input_buffer_handles,
-                struct TpuBufferHandle * output_buffer_handle);
+                struct TpuBufferHandle * output_buffer_handle,
+                std::vector<struct TpuBufferHandle *>children);
 
   ~TPUServeModel();
 
-  // TODO: Status
-  void Predict(std::vector<ErlNifBinary> &inputs, ErlNifBinary * output_buffer);
-
-  size_t output_buffer_size() const { return output_buffer_handle_->size_in_bytes; }
-
-  struct TpuCompiledProgramHandle* compiled_program_handle() const { return cph_; }
+  bool loaded() { return lph_ && loaded_; }
 
 private:
   TPUServeDriver * driver_ = NULL;
-  struct TpuCompiledProgramHandle* cph_;
-  std::vector<struct TpuBufferHandle*> input_buffer_handles_;
-  struct TpuBufferHandle * output_buffer_handle_;
-  struct TpuLoadedProgramHandle * lph_;
   bool loaded_ = false;
+  struct TpuCompiledProgramHandle* cph_ = NULL;
+  struct TpuLoadedProgramHandle * lph_ = NULL;
+  std::vector<std::unique_ptr<TPUServeBuffer>> input_buffer_handles_;
+  std::unique_ptr<TPUServeBuffer> output_buffer_handle_;
 };
 
 } // namespace tpuserve

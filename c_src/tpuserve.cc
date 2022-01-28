@@ -100,7 +100,9 @@ ERL_NIF_TERM predict(ErlNifEnv * env, int argc, const ERL_NIF_TERM argv[]) {
   }
 
   ErlNifBinary output;
-  size_t out_buffer_size = (*tpuserve_model)->output_buffer_size();
+  size_t out_buffer_size = 1024;
+  void * random_buffer = calloc(sizeof(char), out_buffer_size);
+  memcpy(random_buffer, output.data, out_buffer_size);
   enif_alloc_binary(out_buffer_size, &output);
 
   (*tpuserve_model)->Predict(inputs, &output);
