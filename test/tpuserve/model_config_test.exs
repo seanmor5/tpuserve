@@ -2,7 +2,6 @@ defmodule TPUServe.ModelConfigTest do
   use ExUnit.Case
 
   alias TPUServe.ModelConfig
-  alias TPUServe.Shape
 
   describe "parse!" do
     @resnet_config """

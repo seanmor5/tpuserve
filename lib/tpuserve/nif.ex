@@ -11,5 +11,5 @@ defmodule TPUServe.NIF do
 
   def load_model(_driver, _model_path), do: :erlang.nif_error(:undef)
 
-  def predict(_model, _inputs), do: :erlang.nif_error(:undef)
+  def predict(_driver, _model, _inputs), do: :erlang.nif_error(:undef)
 end

@@ -6,6 +6,7 @@
 #include "third_party/libtpu.h"
 #include "xla_data.pb.h"
 
+#include "tpuserve_nif_util.h"
 #include "tpuserve_driver.h"
 
 namespace tpuserve {
@@ -30,11 +31,11 @@ struct BufferInternal {
   // then this will contain references to the BufferInternal
   // structs which make up the tuple. This is recursive because
   // you can have a tuple of tuples or regular flat buffers.
-  std::optional<std::vector<BufferInternal>> internal_buffers;
+  std::optional<std::vector<BufferInternal>> children;
   // Represents the total byte size of all buffers contained
   // within the root buffer.
   size_t total_byte_size;
-}
+};
 
 class TPUServeBuffer {
 public:
@@ -43,26 +44,32 @@ public:
 
   ~TPUServeBuffer();
 
+  std::vector<TpuEvent *> PopulateBuffer(TPUServeDriver * driver,
+                                         const unsigned char * data,
+                                         size_t data_size);
+
+  // TODO: Drop the dependency on ERL_NIF_TERM and instead
+  // create something that allows us to traverse the buffers
+  // in a manner suitable to convert to a nested term.
+  ERL_NIF_TERM ToTerm(ErlNifEnv * env,
+                      TPUServeDriver * driver,
+                      int32_t wait_for_n,
+                      TpuEvent ** wait_for);
+
   size_t root_buffer_size() const {
-    return internal_buffer_handle_->tpu_handle->size_in_bytes;
+    return internal_buffer_handle_.tpu_handle->size_in_bytes;
   }
 
   size_t total_byte_size() const {
-    return internal_buffer_handle_->total_byte_size;
+    return internal_buffer_handle_.total_byte_size;
   }
 
-  void CopyHostToDevice(char * data, size_t data_size);
-
-  ERL_NIF_TERM TPUServeBuffer::CopyDeviceToVM(ErlNifEnv * env,
-                                              int32_t wait_for_n,
-                                              TpuEvent ** wait_for);
-
-  TpuEvent ** TPUServeBuffer::CopyHostToDevice(char * data, size_t data_size);
+  TpuBufferHandle * tpu_handle() { return internal_buffer_handle_.tpu_handle; }
 
 private:
   TPUServeDriver * driver_;
-  struct BufferInternal internal_buffer_handle_;
-}
+  BufferInternal internal_buffer_handle_;
+};
 
 } // namespace tpuserve
 

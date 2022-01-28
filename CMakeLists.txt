@@ -12,7 +12,7 @@ file(GLOB TPUSERVE_SRCS "${C_SRC}/*.cc" "${C_SRC}/*.h" "${C_SRC}/third_party/*.h
 add_library(tpuserve SHARED ${TPUSERVE_SRCS} ${PROTO_SRCS} ${PROTO_HDRS})
 target_link_libraries(tpuserve ${Protobuf_LIBRARIES})
 
-set_property(TARGET tpuserve PROPERTY CXX_STANDARD 11)
+set_property(TARGET tpuserve PROPERTY CXX_STANDARD 17)
 set_target_properties(tpuserve PROPERTIES PREFIX "lib")
 set_target_properties(tpuserve PROPERTIES SUFFIX ".so")
 set_target_properties(tpuserve PROPERTIES INSTALL_RPATH_USE_LINK_PATH TRUE)

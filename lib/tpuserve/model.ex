@@ -21,7 +21,7 @@ defmodule TPUServe.Model do
   @doc """
   Performs inference on inputs.
   """
-  def predict(%Model{ref: model_ref, config: config}, inputs) do
+  def predict(%Model{ref: model_ref, config: config, driver: driver_ref}, inputs) do
     input_buffers =
       config.inputs
       |> Enum.map(fn inp ->
@@ -32,6 +32,8 @@ defmodule TPUServe.Model do
         end
       end)
 
-    TPUServe.NIF.predict(model_ref, input_buffers)
+    # TODO: Map result to output map here
+    {:ok, {out}} = TPUServe.NIF.predict(driver_ref, model_ref, input_buffers)
+    {:ok, out}
   end
 end

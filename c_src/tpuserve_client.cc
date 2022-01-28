@@ -1,34 +1,70 @@
 #include <stdlib.h>
-#include <iostream>
+#include <dlfcn.h>
+#include <fstream>
+#include <sstream>
 
 #include "third_party/libtpu.h"
 #include "xla_data.pb.h"
 #include "hlo.pb.h"
 
+#include "tpuserve_nif_util.h"
 #include "tpuserve_client.h"
+#include "tpuserve_driver.h"
 #include "tpuserve_model.h"
 #include "tpuserve_buffer.h"
-#include "tpuserve_driver.h"
 #include "logging.h"
 
 namespace tpuserve {
 namespace client {
 
-// TODO: StatusOr
-TPUServeModel * CompileModel(TPUServeDriver * driver, std::string& model_path) {
-  // TODO: More C++-isms here
-  FILE * fp = fopen(model_path.c_str(), "r");
-  fseek(fp, 0, SEEK_END);
-  size_t prog_size = ftell(fp);
-  fseek(fp, 0, SEEK_SET);
-  char * model_text = (char *) malloc(sizeof(char) * prog_size + 1);
-  fread(model_text, sizeof(char), prog_size, fp);
-  model_text[prog_size] = '\0';
 
-  struct TpuCompiledProgramHandle * cph =
+TPUServeDriver * InitializeTpuDriver(std::string& shared_lib) {
+  // Attempt to open libtpu.so
+  void * handle;
+  handle = dlopen(shared_lib.c_str(), RTLD_NOW);
+  if (NULL == handle) {
+    LOG_FATAL("Error: %s", dlerror());
+  }
+
+  // Initialize driver
+  TpuDriverFn driver_fn;
+  PrototypeTpuDriver_Initialize* initialize_fn;
+  *(void**)(&initialize_fn) = dlsym(handle, "TpuDriver_Initialize");
+  initialize_fn(&driver_fn, true);
+
+  // Open driver
+  TpuDriver * driver = driver_fn.TpuDriver_Open("local://");
+  if (NULL == driver) {
+    LOG_FATAL("Error: Failed to open driver");
+  }
+
+  // Raw pointers because the VM is annoying
+  return new TPUServeDriver(handle, driver_fn, driver);
+}
+
+std::string ReadFile(std::string& file_path) {
+  std::ifstream file_stream(file_path);
+
+  if (!file_stream) {
+    // TODO: This probably should not abort the entire
+    // server if we can't read a file, so this should
+    // probably be an std::optional or something instead.
+    LOG_FATAL("Failed to read file from %s", file_path.c_str());
+  }
+
+  std::stringstream buffer;
+  buffer << file_stream.rdbuf();
+  return buffer.str();
+}
+
+// TODO: StatusOr
+TPUServeModel * LoadModel(TPUServeDriver * driver, std::string& model_path) {
+  std::string model_text = ReadFile(model_path);
+
+  TpuCompiledProgramHandle * cph =
     driver->driver_fn().TpuDriver_CompileProgramFromText(
-      driver->driver(), model_text, 1, 0, NULL
-    );
+      driver->driver(), model_text.c_str(), 1, 0, NULL
+  );
 
   // TODO: Error check here
 
@@ -38,100 +74,39 @@ TPUServeModel * CompileModel(TPUServeDriver * driver, std::string& model_path) {
   // if you do some digging it starts to make sense. The
   // program shape has the shapes of every parameter and
   // the result shape so we can allocate input buffers and
-  // the single result buffer ahead of time.
-  xla::ProgramShapeProto program_shape_proto;
-  struct CompiledProgramShape * cph_shape =
+  // the single result buffer ahead of time. Input buffers
+  // are in the order declared by the HLO program shape.
+  // TODO: What to do if there's an explicit difference
+  // between config shapes and program shape?
+  xla::ProgramShapeProto program_shape;
+  CompiledProgramShape * cph_shape =
     driver->driver_fn().TpuDriver_GetCompiledProgramShape(cph);
-  program_shape_proto.ParseFromArray(cph_shape->bytes, cph_shape->size);
+  program_shape.ParseFromArray(cph_shape->bytes, cph_shape->size);
 
-  std::vector<struct TpuBufferHandle*> input_handles;
-  input_handles.reserve(program_shape_proto.parameters_size());
-  for (auto shape : program_shape_proto.parameters()) {
-    // Convert parameter shape proto to TPU allocation shape
-    // which can be allocated with driver function
-    struct TpuAllocationShape alloc_shape = GetTpuAllocationShape(shape);
-    // Allocate shape of parameter and return a handle to
-    // the underlying shape so we can track where data
-    // needs to be when an inference request comes in
-    struct TpuBufferHandle * input_handle =
-      driver->driver_fn().TpuDriver_AllocateShape(
-        driver->driver(), 0, 1, alloc_shape, 0, NULL
-      );
-    input_handles.push_back(input_handle);
+  std::vector<std::unique_ptr<TPUServeBuffer>> input_buffers;
+  input_buffers.reserve(program_shape.parameters_size());
+  for (auto shape : program_shape.parameters()) {
+    // Create a unique instance of one of this programs
+    // parameters. The parameter buffers are owned by the
+    // model. TPUServeBuffer's constructor takes care of
+    // allocating the possibly nested buffer for us.
+    input_buffers.push_back(std::make_unique<TPUServeBuffer>(driver, shape));
   }
 
   // Output will always be a single buffer (e.g. a tuple or array)
-  // so we only ever need to allocate that single shape. The buffer
-  // will need to be decomposed later on for it to make sense
-  xla::ShapeProto result_shape = program_shape_proto.result();
-  struct TpuBufferHandle * output_handle;
-  std::vector<struct TpuBufferHandle *> children;
+  // so we only ever need to allocate that single shape. Once again,
+  // the TPUServeBuffer constructor will take care of proper allocation
+  // according to the required buffer shape.
+  xla::ShapeProto result_shape = program_shape.result();
+  std::unique_ptr<TPUServeBuffer> output_buffer =
+    std::make_unique<TPUServeBuffer>(driver, result_shape);
 
-  if (IsTuple(result_shape)) {
-    // TODO: This will end up being a recursive thing for nested
-    // tuples, so we need to move this out of here and abstract
-    // all of it into a single buffer construct.
-    children.reserve(result_shape.tuple_shapes_size());
-    for (auto child_shape : result_shape.tuple_shapes()) {
-      struct TpuAllocationShape child_tpu_shape = GetTpuAllocationShape(child_shape);
-      struct TpuBufferHandle * child_buffer =
-        driver->driver_fn().TpuDriver_AllocateShape(
-          driver->driver(), 0, 1, child_tpu_shape, 0, NULL
-        );
-      children.push_back(child_buffer);
-    }
-
-    output_handle =
-      driver->driver_fn().TpuDriver_AllocateTuple(
-        driver->driver(), 0, 1, children.size(), children.data(), 0, NULL
-      );
-
-  } else {
-    struct TpuAllocationShape output_alloc_shape = GetTpuAllocationShape(result_shape);
-    output_handle =
-      driver->driver_fn().TpuDriver_AllocateShape(
-        driver->driver(), 0, 1, output_alloc_shape, 0, NULL
-      );
-  }
-
-  // TODO: Maybe this should be unique_ptr?
-  return new TPUServeModel(driver, cph, std::move(input_handles), output_handle, std::move(children));
-}
-
-
-
-std::vector<TpuEvent *> CopyHostToBufferInternal(TPUServerDriver * driver,
-                                                 struct BufferInternal internal,
-                                                 char * data,
-                                                 size_t data_size) {
-  size_t total_data_copied = 0;
-  std::queue<BufferInternal> to_populate;
-  std::vector<TpuEvent *> transfer_events;
-  to_populate.push(internal);
-
-  while (total_data_copied < data_size && !to_populate.empty()) {
-    struct BufferInternal populating = to_populate.pop();
-
-    if (populating.children.has_value()) {
-      for (auto child : populating.children.value()) {
-        to_populate.push(child);
-      }
-    } else {
-      size_t size_to_copy = populating.tpu_handle->size_in_bytes;
-      TpuEvent * allocate_event[] = { populating.tpu_handle->event };
-
-      char * src = &(data[total_data_copied]);
-      TpuEvent * transfer_event =
-        driver->driver_fn().TpuDriver_TransferToDevice(
-          driver->driver(), src, populating.tpu_handle, 1, allocate_event
-        );
-
-      transfer_events.push_back(transfer_event);
-      total_data_copied += size_to_copy;
-    }
-  }
-
-  return std::move(transfer_events);
+  // Ideally this would be a unique pointer explicitly owned by a
+  // model manager object, but this object will be managed by the BEAM
+  // and I haven't gotten resource pointers to work. So the usage of
+  // new obligates us to explicitly delete the object once the last
+  // reference to the object goes out of scope.
+  return new TPUServeModel(driver, cph, std::move(input_buffers), std::move(output_buffer));
 }
 
 // Copies flat buffer from host to device by populating
@@ -147,87 +122,36 @@ std::vector<TpuEvent *> CopyHostToBufferInternal(TPUServerDriver * driver,
 // the actual size of data, it is undefined behavior.
 std::vector<TpuEvent *> CopyHostToDevice(TPUServeDriver * driver,
                                          TPUServeBuffer * buffer,
-                                         char * data,
+                                         const unsigned char * data,
                                          size_t data_size) {
-  if (data_size != total_byte_size()) {
+  if (data_size != buffer->total_byte_size()) {
     LOG_ERROR(
       "Unable to copy data to device. \
-        Data size %d exceeded buffer size %d",
-      data_size, total_byte_size()
+        Data size %ld exceeded buffer size %ld",
+      data_size, buffer->total_byte_size()
     );
-    return nullptr;
+    return {};
   }
 
-  return CopyHostToBufferInternal(driver, buffer->buffer_handle(), data, data_size);
-}
-
-TpuStatus * CopyDeviceToHostInternal(TPUServeDriver * driver,
-                                     struct BufferInternal internal,
-                                     char * dst,
-                                     int32_t wait_for_n,
-                                     TpuEvent ** wait_for) {
-  TpuEvent * transfer_event =
-    driver->driver_fn().TpuDriver_TransferFromDevice(
-      driver->driver(), internal.tpu_handle, dst,
-      wait_for_n, wait_for
-    );
-  // TODO: Timeout option
-  TpuStatus * transfer_status =
-    driver->driver_fn().TpuDriver_EventAwait(transfer_event, -1);
-  return transfer_status;
-}
-
-ERL_NIF_TERM CopyDeviceToVMInternal(ErlNifEnv * env,
-                                    TPUServeDriver * driver,
-                                    BufferInternal internal,
-                                    int32_t wait_for_n,
-                                    TpuEvent ** wait_for) {
-  if (internal.children.has_value()) {
-    std::vector<ERL_NIF_TERM> inner_terms;
-    inner_terms.reserve(internal.children.value().size());
-
-    for (auto child : internal.children.value()) {
-      ERL_NIF_TERM child_term =
-        CopyDeviceToVMInternal(driver, child, wait_for_n, wait_for);
-      inner_terms.push_back(child_term);
-    }
-
-    return enif_make_tuple_from_array(env, inner_terms.data(), inner_terms.size());
-  } else {
-    size_t size_of_buffer = internal.tpu_handle->size_in_bytes;
-    ErlNifBinary binary;
-    enif_alloc_binary(size_of_buffer, &binary);
-
-    TpuStatus * transfer_status =
-      CopyDeviceToHostInternal(driver, internal, wait_for_n, wait_for);
-
-    if (transfer_status && transfer_status->code != 0) {
-      LOG_ERROR("Something went wrong in transfer: %s", transfer_status->msg);
-      return nif::atom(env, "error");
-    } else {
-      return nif::make(env, binary);
-    }
-  }
+  return buffer->PopulateBuffer(driver, data, data_size);
 }
 
 // Copies potentially nested tuple data from the device
 // to a potentially nested Erlang VM tuple. All of the
 // transfer events are completely synchronized before
 // returning to the host.
-ERL_NIF_TERM CopyDeviceToVM(TPUServeDriver * driver,
+ERL_NIF_TERM CopyDeviceToVM(ErlNifEnv * env,
+                            TPUServeDriver * driver,
                             TPUServeBuffer * buffer,
-                            ErlNifEnv * env,
                             int32_t wait_for_n,
                             TpuEvent ** wait_for) {
-  return CopyDeviceToVMInternal(env, driver, buffer->buffer_handle(), wait_for_n, wait_for);
+  return buffer->ToTerm(env, driver, wait_for_n, wait_for);
 }
 
 // TODO: Status
-// TODO: Multiple outputs
-// Assumes output buffer is allocated properly
-ERL_NIF_TERM Predict(TPUServeDriver * driver,
+ERL_NIF_TERM Predict(ErlNifEnv * env,
+                     TPUServeDriver * driver,
                      TPUServeModel * model,
-                     ErlNifEnv * env,
                      std::vector<ErlNifBinary> inputs) {
   if (!model->loaded()) {
     LOG_ERROR("Inference Error: Model was not properly loaded");
@@ -238,13 +162,14 @@ ERL_NIF_TERM Predict(TPUServeDriver * driver,
     LOG_ERROR("Inference Error: Number of model input buffers does \
               not match inputs given.");
   }
+
   // Populate input buffers
-  std::vector<struct TpuEvent*> transfer_events;
+  std::vector<TpuEvent*> transfer_events;
   for (int i = 0; i < model->number_of_inputs(); i++) {
     ErlNifBinary to_copy = inputs.at(i);
     std::vector<TpuEvent *> events_for_input =
       CopyHostToDevice(
-        driver, model->buffer(i), inputs.data, inputs.size
+        driver, model->input_buffer(i), const_cast<unsigned char *>(to_copy.data), to_copy.size
       );
 
     transfer_events.insert(
@@ -256,12 +181,11 @@ ERL_NIF_TERM Predict(TPUServeDriver * driver,
   // TODO: I hate this pattern, just a bad design right now
   TpuEvent * execute_event = model->Execute(transfer_events.size(), transfer_events.data());
 
-  // Transfer from device
-  TpuEvent * execution_events[] = { execute_event };
-
+  // Transfer result to VM
+  TpuEvent * wait_for_execution[] = { execute_event };
   ERL_NIF_TERM execution_result =
     CopyDeviceToVM(
-      driver, model->output_buffer(), env, 1, execution_events
+      env, driver, model->output_buffer(), 1, wait_for_execution
     );
 
   // Clean up

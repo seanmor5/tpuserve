@@ -30,26 +30,24 @@ class TPUServeDriver {
 public:
 
   TPUServeDriver(void * handle,
-                 struct TpuDriverFn driver_fn,
-                 struct TpuDriver * driver) : handle_(handle),
+                 TpuDriverFn driver_fn,
+                 TpuDriver * driver) : handle_(handle),
                                               driver_fn_(driver_fn),
                                               driver_(driver) {}
 
   ~TPUServeDriver();
 
 
-  struct TpuDriverFn driver_fn() const { return driver_fn_; }
-  struct TpuDriver * driver() const { return driver_; }
+  TpuDriverFn driver_fn() const { return driver_fn_; }
+  TpuDriver * driver() const { return driver_; }
 
 private:
   // Pointer to libtpu.so dlsym handle
   void * handle_ = NULL;
-  // TpuDriverFn Struct
-  struct TpuDriverFn driver_fn_;
+  // TpuDriverFn
+  TpuDriverFn driver_fn_;
   // Pointer to TpuDriver
-  struct TpuDriver * driver_ = NULL;
+  TpuDriver * driver_ = NULL;
 };
-
-TPUServeDriver * GetTPUServeDriver(const char * shared_lib);
 }
 #endif
