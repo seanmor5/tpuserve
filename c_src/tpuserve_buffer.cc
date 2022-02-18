@@ -66,6 +66,7 @@ BufferInternal AllocateBuffer(TPUServeDriver * driver, xla::ShapeProto shape) {
   }
 
   BufferInternal internal_handle = {
+    .shape=shape,
     .tpu_handle=root_buffer,
     .children=internal_buffers,
     .total_byte_size=total_byte_size
@@ -115,10 +116,9 @@ std::vector<TpuEvent *> TPUServeBuffer::PopulateBuffer(TPUServeDriver * driver,
       size_t size_to_copy = populating->tpu_handle->size_in_bytes;
       TpuEvent * allocate_event[] = { populating->tpu_handle->event };
 
-      const unsigned char * src = &(data[total_data_copied]);
       TpuEvent * transfer_event =
         driver->driver_fn().TpuDriver_TransferToDevice(
-          driver->driver(), src, populating->tpu_handle, 1, allocate_event
+          driver->driver(), &data[total_data_copied], populating->tpu_handle, 1, allocate_event
         );
 
       transfer_events.push_back(transfer_event);
@@ -139,9 +139,11 @@ TpuStatus * CopyDeviceToHostInternal(TPUServeDriver * driver,
       driver->driver(), internal.tpu_handle, dst,
       wait_for_n, wait_for
     );
+
   // TODO: Timeout option
   TpuStatus * transfer_status =
     driver->driver_fn().TpuDriver_EventAwait(transfer_event, -1);
+
   return transfer_status;
 }
 

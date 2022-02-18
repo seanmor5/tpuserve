@@ -100,7 +100,6 @@ TPUServeModel * LoadModel(TPUServeDriver * driver, std::string& model_path) {
   xla::ShapeProto result_shape = program_shape.result();
   std::unique_ptr<TPUServeBuffer> output_buffer =
     std::make_unique<TPUServeBuffer>(driver, result_shape);
-
   // Ideally this would be a unique pointer explicitly owned by a
   // model manager object, but this object will be managed by the BEAM
   // and I haven't gotten resource pointers to work. So the usage of

@@ -1,10 +1,22 @@
 defmodule TPUServe.ModelManager do
   @moduledoc """
-  Manages which models are exposed by the server.
+  Manages which models are exposed by the server. The TPUServe
+  Model struct just wraps the underlying TPUServeModel NIF resource
+  which just wraps TPU Loaded Program Handles and pre-allocated input
+  and output buffers (LOL).
 
-  Stores TPUServeModel references in a map of
-  `%{endpoint => model_ref}`. TPUServeModels are just
-  loaded program handles and input/output buffer handles.
+  The Model Manager handles requests for access to underlying model
+  resources. The model manager needs to ensure that only one process
+  can access the underlying resource at once. We achieve this with a
+  lock; however, in order to try and squeeze more performance out of
+  the server, we introduce an additional state to support autobatching.
+
+  TPUs will always implicitly pad inputs to have batch or feature sizes
+  of 128, which means we are really wasting resources when sending requests
+  at batch size 1. TPUs are not meant for latency-sensitive applications.
+  A sort of way to augment this performance is to introduce a temporary
+  waiting state which waits for simulataneous requests to the same model
+  resources and sends those requests as 1 to the TPU.
   """
 
   alias TPUServe.{Driver, Model, ModelConfig}

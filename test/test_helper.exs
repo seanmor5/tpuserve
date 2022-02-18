@@ -32,6 +32,18 @@ defmodule TestUtils do
     [{} | shapes]
   end
 
+  def broadcastable(shape) do
+    case shape do
+      {} ->
+        {}
+
+      shape when is_tuple(shape) ->
+        rank = Nx.rank(shape)
+        random_rank = :rand.uniform(rank) - 1
+        put_elem(shape, random_rank, 1)
+    end
+  end
+
   def export_and_test_model(name, fun, cases, generator \\ &default_tensor_generator/2) do
     driver = TPUServe.Driver.fetch!()
 
@@ -84,7 +96,7 @@ defmodule TestUtils do
 
   def assert_all_close!(lhs, rhs) do
     # TPUs are not very precise, but that's okay :D
-    atol = 1.0e-3
+    atol = 1.0
 
     close? = Nx.Defn.jit(fn left, right -> Nx.all_close(left, right, atol: atol) end, [lhs, rhs])
 

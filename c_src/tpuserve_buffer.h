@@ -22,6 +22,8 @@ namespace tpuserve {
 struct BufferInternal;
 
 struct BufferInternal {
+  // Represents the shape of this buffer.
+  xla::ShapeProto shape;
   // At the top level, there will always be a reference to
   // some underlying TPU memory. Even in the case of a tuple,
   // we will have this reference to pass to execution or
