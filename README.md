@@ -2,8 +2,6 @@
 
 Google Cloud TPUs are designed for throughput - they work well for situations that benefit from massive parallelization and when precision isn't necessarily a concern, such as when training large neural networks. They are not designed to perform well in situations where low-latency at small batch sizes is important. Hosting models on Cloud TPU VMs is almost certainly a bad idea. It's still fun to experiment though, and `libtpu` means we can implement a model server with minimal dependencies.
 
-I am working on a free hosted version for those without access to Cloud TPU VMs who want to mess around with serving their Nx / JAX / TensorFlow models.
-
 ## Building and Running
 
 You can run tpuserve with Elixir and CMake installed on a TPU VM. If you want to build a release binary with Burrito, you must also have zig, 7z, and gzip installed and in your path. With dependencies installed:
