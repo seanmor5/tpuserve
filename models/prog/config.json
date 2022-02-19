@@ -1,0 +1,22 @@
+{
+    "name": "Prog",
+    "inputs": [
+      {
+        "name": "a",
+        "shape": [8, 128],
+        "type": "F32"
+      },
+      {
+        "name": "b",
+        "shape": [128, 32],
+        "type": "F32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "out",
+        "shape": [8, 32],
+        "type": "F32"
+      }
+    ]
+  }

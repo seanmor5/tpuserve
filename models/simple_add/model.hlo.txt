@@ -1,0 +1,10 @@
+HloModule xla_computation__lambda___1.6
+
+ENTRY xla_computation__lambda___1.6 {
+  constant.3 = pred[] constant(false)
+  parameter.1 = s32[] parameter(0)
+  parameter.2 = s32[] parameter(1)
+  add.4 = s32[] add(parameter.1, parameter.2)
+  ROOT tuple.5 = (s32[]) tuple(add.4)
+}
+
