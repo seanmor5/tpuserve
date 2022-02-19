@@ -47,7 +47,7 @@ public:
   ~TPUServeBuffer();
 
   std::vector<TpuEvent *> PopulateBuffer(TPUServeDriver * driver,
-                                         const unsigned char * data,
+                                         unsigned char * data,
                                          size_t data_size);
 
   // TODO: Drop the dependency on ERL_NIF_TERM and instead

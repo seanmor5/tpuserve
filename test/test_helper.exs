@@ -70,11 +70,9 @@ defmodule TestUtils do
 
         # Get actual
         inp_buffers = Map.new(inp_tensor_map, fn {k, v} -> {k, Nx.to_binary(v)} end)
-        {:ok, pred} = TPUServe.Model.predict(loaded_model, inp_buffers)
+        {:ok, actual} = TPUServe.Model.predict(loaded_model, inp_buffers)
 
-        # TODO: Handle Tuples
-        actual = Nx.from_binary(pred, Nx.type(expected)) |> Nx.reshape(expected)
-        assert_all_close!(actual, expected)
+        assert_match!(actual, expected)
       rescue
         e ->
           reraise ArgumentError.exception(
@@ -94,9 +92,36 @@ defmodule TestUtils do
     %TPUServe.ModelConfig{name: case_name, inputs: inp_map, outputs: []}
   end
 
+  def assert_match!(actual, expected) do
+    case {actual, expected} do
+      {actual, expected} when is_tuple(actual) and is_tuple(expected) ->
+        actual = Tuple.to_list(actual)
+        expected = Tuple.to_list(expected)
+        Enum.zip_with(actual, expected, &assert_match!/2)
+
+      {actual, %Nx.Tensor{} = expected} when is_binary(actual) ->
+        actual_tensor =
+          actual
+          |> Nx.from_binary(Nx.type(expected))
+          |> Nx.reshape(expected)
+
+        assert_all_close!(actual_tensor, expected)
+
+      {{actual}, %Nx.Tensor{} = expected} when is_binary(actual) ->
+        actual_tensor =
+          actual
+          |> Nx.from_binary(Nx.type(expected))
+          |> Nx.reshape(expected)
+
+        assert_all_close!(actual_tensor, expected)
+
+      {actual, expected} ->
+        raise ArgumentError, "expected #{inspect(actual)} to match #{inspect(expected)}"
+    end
+  end
+
   def assert_all_close!(lhs, rhs) do
-    # TPUs are not very precise, but that's okay :D
-    atol = 1.0
+    atol = 1.0e-3
 
     close? = Nx.Defn.jit(fn left, right -> Nx.all_close(left, right, atol: atol) end, [lhs, rhs])
 

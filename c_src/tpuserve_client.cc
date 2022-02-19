@@ -105,7 +105,10 @@ TPUServeModel * LoadModel(TPUServeDriver * driver, std::string& model_path) {
   // and I haven't gotten resource pointers to work. So the usage of
   // new obligates us to explicitly delete the object once the last
   // reference to the object goes out of scope.
-  return new TPUServeModel(driver, cph, std::move(input_buffers), std::move(output_buffer));
+  return new TPUServeModel(driver,
+                           cph,
+                           std::move(input_buffers),
+                           std::move(output_buffer));
 }
 
 // Copies flat buffer from host to device by populating
@@ -121,7 +124,7 @@ TPUServeModel * LoadModel(TPUServeDriver * driver, std::string& model_path) {
 // the actual size of data, it is undefined behavior.
 std::vector<TpuEvent *> CopyHostToDevice(TPUServeDriver * driver,
                                          TPUServeBuffer * buffer,
-                                         const unsigned char * data,
+                                         unsigned char * data,
                                          size_t data_size) {
   if (data_size != buffer->total_byte_size()) {
     LOG_ERROR(

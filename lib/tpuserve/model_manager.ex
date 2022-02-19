@@ -19,7 +19,7 @@ defmodule TPUServe.ModelManager do
   resources and sends those requests as 1 to the TPU.
   """
 
-  alias TPUServe.{Driver, Model, ModelConfig}
+  alias TPUServe.{Driver, Error, Model, ModelConfig}
   require Logger
   use GenServer
 
@@ -34,6 +34,10 @@ defmodule TPUServe.ModelManager do
 
   def fetch(endpoint) do
     GenServer.call(__MODULE__, {:fetch, endpoint})
+  end
+
+  def list() do
+    GenServer.call(__MODULE__, :list)
   end
 
   def init(repo) do
@@ -100,13 +104,23 @@ defmodule TPUServe.ModelManager do
     end
   end
 
-  def handle_call({:fetch, model}, _from, state) do
-    case state[model] do
-      nil ->
-        {:reply, {:error, :not_found}, state}
+  def handle_call({:fetch, key}, _from, state) do
+    case state do
+      %{^key => %Model{} = model} ->
+        {:reply, {:ok, model}, state}
 
-      model_ref ->
-        {:reply, {:ok, model_ref}, state}
+      %{} ->
+        {:reply, {:error, Error.not_found("Model #{key} does not exist")}, state}
     end
+  end
+
+  def handle_call(:list, _from, state) do
+    models =
+      state
+      |> Map.new(fn {endpoint, %Model{config: config}} ->
+        {endpoint, %{inputs: config.inputs, outputs: config.outputs}}
+      end)
+
+    {:reply, {:ok, models}, state}
   end
 end

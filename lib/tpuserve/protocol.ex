@@ -16,4 +16,18 @@ defmodule TPUServe.Protocol do
 
     {:ok, res}
   end
+
+  def encode_models(models) do
+    models
+    |> Map.new(fn {endpoint, %{inputs: inps, outputs: outs}} ->
+      inps = Map.new(inps, fn %{name: name, shape: shape, type: type} ->
+        {name, %{shape: shape, type: Nx.Type.to_string(type)}}
+      end)
+      outs = Map.new(outs, fn %{name: name, shape: shape, type: type} ->
+        {name, %{shape: shape, type: Nx.Type.to_string(type)}}
+      end)
+      {endpoint, %{inputs: inps, outputs: outs}}
+    end)
+    |> Jason.encode()
+  end
 end

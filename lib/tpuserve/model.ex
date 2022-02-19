@@ -3,7 +3,7 @@ defmodule TPUServe.Model do
   Model Abstraction.
   """
 
-  alias TPUServe.Driver
+  alias TPUServe.{Driver, Error}
   alias __MODULE__, as: Model
 
   defstruct [:driver, :ref, :config]
@@ -28,12 +28,18 @@ defmodule TPUServe.Model do
         if Map.has_key?(inputs, inp.name) do
           inputs[inp.name]
         else
-          # TODO: Error here
+          msg = "#{inp.name} not in model inputs"
+          {:error, Error.inference(msg)}
         end
       end)
 
     # TODO: Map result to output map here
-    {:ok, {out}} = TPUServe.NIF.predict(driver_ref, model_ref, input_buffers)
-    {:ok, out}
+    case TPUServe.NIF.predict(driver_ref, model_ref, input_buffers) do
+      {:ok, out} ->
+        {:ok, out}
+
+      {:error, msg} ->
+        Error.inference(msg)
+    end
   end
 end

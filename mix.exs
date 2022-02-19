@@ -5,6 +5,7 @@ defmodule TPUServe.MixProject do
     [
       app: :tpuserve,
       version: "0.1.0",
+      releases: releases(),
       elixir: "~> 1.12",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
@@ -20,6 +21,19 @@ defmodule TPUServe.MixProject do
     ]
   end
 
+  def releases do
+    [
+      tpuserve: [
+        steps: [:assemble, &Burrito.wrap/1],
+        burrito: [
+          targets: [
+            linux: [os: :linux, cpu: :x86_64]
+          ]
+        ]
+      ]
+    ]
+  end
+
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
@@ -27,8 +41,11 @@ defmodule TPUServe.MixProject do
       {:jason, "~> 1.2"},
       {:elixir_make, "~> 0.6", runtime: false},
       {:msgpax, "~> 2.3.0"},
-      {:exla, "~> 0.1.0-dev", github: "elixir-nx/nx", sparse: "exla", branch: "sm-exla-export", only: [:test]},
-      {:nx, "~> 0.1.0-dev", github: "elixir-nx/nx", sparse: "nx", branch: "sm-exla-export", only: [:test], override: true}
+      {:burrito, github: "burrito-elixir/burrito"},
+      {:exla, "~> 0.1.0-dev",
+       github: "elixir-nx/nx", sparse: "exla", branch: "sm-exla-export", only: [:test]},
+      {:nx, "~> 0.1.0-dev",
+       github: "elixir-nx/nx", sparse: "nx", branch: "sm-exla-export", override: true}
     ]
   end
 end
