@@ -77,7 +77,7 @@ comp = tf.function(fun, jit_compile=True)
 
 with open('model.hlo.txt', 'w') as outfile:
   outfile.write(comp.experimental_get_compiler_ir(tf.ones(INPUT_SHAPE))())
-``
+```
 
 If you have a Keras model:
 
