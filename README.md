@@ -1,8 +1,8 @@
 # tpuserve: Experimenting with Cloud TPU VMs as Model Servers
 
-Google Cloud TPUs are designed for throughput - they work well for situations that benefit from massive parallelization and when precision isn't necessarily a concern, such as when training large neural networks. They are not designed to perform well in situations where low-latency at small batch sizes is important. Despite this, I wanted to see how Cloud TPU VMs would perform as platforms for model serving.
+Google Cloud TPUs are designed for throughput - they work well for situations that benefit from massive parallelization and when precision isn't necessarily a concern, such as when training large neural networks. They are not designed to perform well in situations where low-latency at small batch sizes is important. Hosting models on Cloud TPU VMs is almost certainly a bad idea. It's still fun to experiment though, and `libtpu` means we can implement a model server with minimal dependencies.
 
-I am working on a free hosted version for those without access to Cloud TPU VMs who want to mess around with serving their models.
+I am working on a free hosted version for those without access to Cloud TPU VMs who want to mess around with serving their Nx / JAX / TensorFlow models.
 
 ## Building and Running
 
@@ -27,7 +27,7 @@ sudo TPUSERVE_INSTALL_DIR=. tpuserve_linux
 
 ## Exporting Models
 
-tpuserve serves models from a *model repository*. A repository is just a directory where each subdirectory represents a model endpoint. Each endpoint requires a `model.hlo.txt` and a `config.json` file. See the [](configuration guide) for information on constructing model configurations. An example model repository looks something like:
+tpuserve serves models from a *model repository*. A repository is just a directory where each subdirectory represents a model endpoint. Each endpoint requires a `model.hlo.txt` and a `config.json` file. See `models` for examples of configurations.
 
 ```
 - models
@@ -108,3 +108,15 @@ The following endpoints are currently available:
 | `/v1/status`           | `GET`  | Sends 200 response and Up if the server is currently running    |
 | `/v1/list_models`      | `GET`  | Responds with list of active endpoints and their configurations |
 | `/v1/inference/:model` | `POST` | Send Inference request to given model name                      |
+
+## Autobatching (WIP)
+
+Due to XLA/TPU static shape requirements, autobatching is a bit tricky. TPUs will pad (I think this is what LinearizeShape in libtpu does) input batch / feature sizes to a multiple of 128. This means if you compile a program with a batch or feature size which is not a multiple of 128, you are essentially wasting resources. By compiling a program with a batch-size that is a multiple of 128, we can batch adjacent requests (with some low-cost time limit) and pad to the correct size on the client-side. This still requires proper locking of model resources, and some additions in the model manager.
+
+## License
+
+Copyright (c) 2022 Sean Moriarity
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.

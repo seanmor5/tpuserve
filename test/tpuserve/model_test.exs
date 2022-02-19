@@ -23,7 +23,7 @@ defmodule TPUServe.ModelTest do
     defn(identity(x), do: x)
 
     test "identity, across types, shapes" do
-      shapes = rank_up_to(2)
+      shapes = rank_up_to(5)
 
       cases =
         for shape <- shapes, type <- @all_types, into: %{} do
@@ -37,7 +37,7 @@ defmodule TPUServe.ModelTest do
     test "tuple outputs" do
       fun = fn x, y, z -> {x, y, x, z, y, x} end
 
-      shapes = rank_up_to(2) |> Enum.shuffle() |> Enum.chunk_every(3, 1, :discard)
+      shapes = rank_up_to(5) |> Enum.shuffle() |> Enum.chunk_every(3, 1, :discard)
       mixed_types = Enum.shuffle(@all_types) |> Enum.chunk_every(3, 2, :discard)
 
       cases =
@@ -85,7 +85,7 @@ defmodule TPUServe.ModelTest do
 
     for op <- element_wise_ops do
       test "#{op}, across types, shapes" do
-        shapes = rank_up_to(2)
+        shapes = rank_up_to(5)
 
         cases =
           for shape <- shapes, type <- @all_types, into: %{} do
@@ -103,7 +103,7 @@ defmodule TPUServe.ModelTest do
 
     for op <- element_wise_bitwise_ops do
       test "#{op}, across types, shapes" do
-        shapes = rank_up_to(2)
+        shapes = rank_up_to(5)
 
         cases =
           for shape <- shapes, type <- @integer_types, into: %{} do
@@ -137,7 +137,7 @@ defmodule TPUServe.ModelTest do
 
     for op <- element_wise_binary_ops do
       test "#{op}, across types, shapes" do
-        shapes = rank_up_to(2)
+        shapes = rank_up_to(5)
 
         cases =
           for shape <- shapes, type <- @all_types, into: %{} do
@@ -155,7 +155,7 @@ defmodule TPUServe.ModelTest do
       end
 
       test "#{op}, across types, shapes, broadcasting" do
-        shapes = rank_up_to(2) |> Enum.map(fn x -> {x, broadcastable(x)} end)
+        shapes = rank_up_to(5) |> Enum.map(fn x -> {x, broadcastable(x)} end)
 
         cases =
           for {shape, bshape} <- shapes, type <- @all_types, into: %{} do
@@ -173,7 +173,7 @@ defmodule TPUServe.ModelTest do
       end
 
       test "#{op}, across types, shapes, mixed_types" do
-        shapes = rank_up_to(2)
+        shapes = rank_up_to(5)
         mixed_types = Enum.shuffle(@all_types) |> Enum.chunk_every(2, 2, :discard)
 
         cases =
@@ -204,7 +204,7 @@ defmodule TPUServe.ModelTest do
 
     for op <- element_wise_binary_ops do
       test "#{op}, across types, shapes" do
-        shapes = rank_up_to(2)
+        shapes = rank_up_to(5)
 
         cases =
           for shape <- shapes, type <- @integer_types, into: %{} do
@@ -222,7 +222,7 @@ defmodule TPUServe.ModelTest do
       end
 
       test "#{op}, across types, shapes, broadcasting" do
-        shapes = rank_up_to(2) |> Enum.map(fn x -> {x, broadcastable(x)} end)
+        shapes = rank_up_to(5) |> Enum.map(fn x -> {x, broadcastable(x)} end)
 
         cases =
           for {shape, bshape} <- shapes, type <- @integer_types, into: %{} do
@@ -240,7 +240,7 @@ defmodule TPUServe.ModelTest do
       end
 
       test "#{op}, across types, shapes, mixed_types" do
-        shapes = rank_up_to(2)
+        shapes = rank_up_to(5)
         mixed_types = Enum.shuffle(@integer_types) |> Enum.chunk_every(2, 2, :discard)
 
         cases =
@@ -264,7 +264,7 @@ defmodule TPUServe.ModelTest do
 
     for op <- multi_axis_aggregate_ops do
       test "#{op}, all axes, across types, shapes" do
-        shapes = rank_up_to(2)
+        shapes = rank_up_to(5)
 
         cases =
           for shape <- shapes, type <- @all_types, into: %{} do
@@ -276,7 +276,7 @@ defmodule TPUServe.ModelTest do
       end
 
       test "#{op}, last axis, across types, shapes" do
-        [_ | shapes] = rank_up_to(2)
+        [_ | shapes] = rank_up_to(5)
 
         cases =
           for shape <- shapes, type <- @all_types, into: %{} do
@@ -292,7 +292,7 @@ defmodule TPUServe.ModelTest do
       end
 
       test "#{op}, first and last axis, across types, shapes" do
-        [_, _ | shapes] = rank_up_to(2)
+        [_, _ | shapes] = rank_up_to(5)
 
         cases =
           for shape <- shapes, type <- @all_types, into: %{} do

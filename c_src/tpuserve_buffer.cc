@@ -10,28 +10,27 @@
 
 namespace tpuserve {
 
-// template <typename T>
-// void RelayoutBuffer(char * src,
-//                     const xla::ShapeProto& src_shape,
-//                     const xla::ShapeProto& dst_shape) {
-//   std::vector<int64_t> index(dst_shape.dimensions_size());
-//   int64_t byte_size = shape::ByteSizeOfShape(dst_shape);
-//   LOG_INFO("%ld", byte_size);
-//   int64_t prim_size = shape::ByteSizeOfPrimitiveType(dst_shape.element_type());
-//   int64_t num_elems = byte_size / prim_size;
+template <typename T>
+void RelayoutBuffer(char * src,
+                    const xla::ShapeProto& src_shape,
+                    const xla::ShapeProto& dst_shape) {
+  std::vector<int64_t> index(dst_shape.dimensions_size());
+  int64_t byte_size = shape::ByteSizeOfShape(dst_shape);
+  int64_t prim_size = shape::ByteSizeOfPrimitiveType(dst_shape.element_type());
+  int64_t num_elems = byte_size / prim_size;
 
-//   std::vector<T> src_arr(num_elems);
-//   std::vector<T> dst_arr(num_elems);
+  std::vector<T> src_arr(num_elems);
+  std::vector<T> dst_arr(num_elems);
 
-//   std::copy(src_arr.data(), src_arr.data() + byte_size, src);
+  memcpy(src_arr.data(), src, byte_size);
 
-//   do {
-//     dst_arr[shape::MultidimensionalIndexToLinearIndex(dst_shape, index)] =
-//       src_arr[shape::MultidimensionalIndexToLinearIndex(src_shape, index)];
-//   } while(shape::BumpIndices(dst_shape, index));
+  do {
+    dst_arr[shape::MultidimensionalIndexToLinearIndex(dst_shape, index)] =
+      src_arr[shape::MultidimensionalIndexToLinearIndex(src_shape, index)];
+  } while(shape::BumpIndices(dst_shape, index));
 
-//   std::copy(dst_arr.data(), dst_arr.data() + byte_size, src);
-// }
+  memcpy(src, dst_arr.data(), byte_size);
+}
 
 // Changes the layout of buffer in memory from the layout in src_shape
 // to the layout in dst_shape. This is done with an intermediate buffer
@@ -39,47 +38,47 @@ namespace tpuserve {
 // linear indices in the source buffer. TPUs do some funky things with
 // memory layout, so this is useful for ensuring inputs and outputs are
 // mapped to the correct layout before and after execution.
-// void Relayout(char * buffer,
-//               const xla::ShapeProto& src_shape,
-//               const xla::ShapeProto& dst_shape) {
-//   // There is no need to do a relayout if the shapes have the same
-//   // layout, so we check first before any allocations.
-//   if (shape::LayoutsAreEqual(src_shape.layout(), dst_shape.layout())) {
-//     return;
-//   }
+void Relayout(char * buffer,
+              const xla::ShapeProto& src_shape,
+              const xla::ShapeProto& dst_shape) {
+  // There is no need to do a relayout if the shapes have the same
+  // layout, so we check first before any allocations.
+  if (shape::LayoutsAreEqual(src_shape.layout(), dst_shape.layout())) {
+    return;
+  }
 
-//   switch (src_shape.element_type()) {
-//     case (xla::PrimitiveType::S8):
-//       RelayoutBuffer<int8_t>(buffer, src_shape, dst_shape);
-//       break;
-//     case (xla::PrimitiveType::S16):
-//       RelayoutBuffer<int16_t>(buffer, src_shape, dst_shape);
-//       break;
-//     case (xla::PrimitiveType::S32):
-//       RelayoutBuffer<int32_t>(buffer, src_shape, dst_shape);
-//       break;
-//     case (xla::PrimitiveType::U8):
-//       RelayoutBuffer<uint8_t>(buffer, src_shape, dst_shape);
-//       break;
-//     case (xla::PrimitiveType::U16):
-//       RelayoutBuffer<uint16_t>(buffer, src_shape, dst_shape);
-//       break;
-//     case (xla::PrimitiveType::U32):
-//       RelayoutBuffer<uint32_t>(buffer, src_shape, dst_shape);
-//       break;
-//     case (xla::PrimitiveType::BF16):
-//       RelayoutBuffer<uint16_t>(buffer, src_shape, dst_shape);
-//       break;
-//     case (xla::PrimitiveType::F16):
-//       RelayoutBuffer<uint16_t>(buffer, src_shape, dst_shape);
-//       break;
-//     case (xla::PrimitiveType::F32):
-//       RelayoutBuffer<float>(buffer, src_shape, dst_shape);
-//       break;
-//     default:
-//       return;
-//   }
-// }
+  switch (src_shape.element_type()) {
+    case (xla::PrimitiveType::S8):
+      RelayoutBuffer<int8_t>(buffer, src_shape, dst_shape);
+      break;
+    case (xla::PrimitiveType::S16):
+      RelayoutBuffer<int16_t>(buffer, src_shape, dst_shape);
+      break;
+    case (xla::PrimitiveType::S32):
+      RelayoutBuffer<int32_t>(buffer, src_shape, dst_shape);
+      break;
+    case (xla::PrimitiveType::U8):
+      RelayoutBuffer<uint8_t>(buffer, src_shape, dst_shape);
+      break;
+    case (xla::PrimitiveType::U16):
+      RelayoutBuffer<uint16_t>(buffer, src_shape, dst_shape);
+      break;
+    case (xla::PrimitiveType::U32):
+      RelayoutBuffer<uint32_t>(buffer, src_shape, dst_shape);
+      break;
+    case (xla::PrimitiveType::BF16):
+      RelayoutBuffer<uint16_t>(buffer, src_shape, dst_shape);
+      break;
+    case (xla::PrimitiveType::F16):
+      RelayoutBuffer<uint16_t>(buffer, src_shape, dst_shape);
+      break;
+    case (xla::PrimitiveType::F32):
+      RelayoutBuffer<float>(buffer, src_shape, dst_shape);
+      break;
+    default:
+      return;
+  }
+}
 
 BufferInternal AllocateBuffer(TPUServeDriver * driver, xla::ShapeProto shape) {
   TpuBufferHandle * root_buffer;
@@ -171,7 +170,7 @@ std::vector<TpuEvent *> TPUServeBuffer::PopulateBuffer(TPUServeDriver * driver,
 
       xla::ShapeProto src_shape = shape::MakeRowMajor(populating->shape);
       char * to_transfer = (char *) &data[total_data_copied];
-      // Relayout(to_transfer, src_shape, populating->shape);
+      Relayout(to_transfer, src_shape, populating->shape);
 
       TpuEvent * transfer_event =
         driver->driver_fn().TpuDriver_TransferToDevice(
@@ -231,7 +230,7 @@ ERL_NIF_TERM CopyDeviceToVMInternal(ErlNifEnv * env,
       CopyDeviceToHostInternal(driver, internal, reinterpret_cast<char *>(binary.data), wait_for_n, wait_for);
 
     char * buf = (char *) binary.data;
-    // Relayout(buf, internal.shape, dst_shape);
+    Relayout(buf, internal.shape, dst_shape);
 
     if (transfer_status && transfer_status->code != 0) {
       LOG_ERROR("Something went wrong in transfer: %s", transfer_status->msg);

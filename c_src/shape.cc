@@ -132,7 +132,7 @@ namespace shape {
     }
 
     xla::LayoutProto row_major_layout;
-    for (int i = shape.dimensions_size() - 1; i >= 0; i++) {
+    for (int64_t i = shape.dimensions_size() - 1; i >= 0; i--) {
       row_major_layout.add_minor_to_major(i);
     }
     xla::LayoutProto * mutable_layout = row_major_shape.mutable_layout();
